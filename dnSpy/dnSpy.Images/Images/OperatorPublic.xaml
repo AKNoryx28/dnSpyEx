@@ -1,21 +1,27 @@
 <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-         Width="16" Height="16">
-  <Rectangle Width="16" Height="16">
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:System="clr-namespace:System;assembly=mscorlib"
+         Width="16 " Height="16">
+  <Rectangle Width="16 " Height="16">
+    <FrameworkElement.Resources>
+      <SolidColorBrush x:Key="canvas" Opacity="0"/>
+      <SolidColorBrush x:Key="light-blue-10" Color="#005dba" Opacity="0.1"/>
+      <SolidColorBrush x:Key="light-blue" Color="#005dba" Opacity="1"/>
+    </FrameworkElement.Resources>
     <Shape.Fill>
-      <DrawingBrush>
+      <DrawingBrush Stretch="None">
         <DrawingBrush.Drawing>
           <DrawingGroup>
-            <DrawingGroup.Children>
-              <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1 M 0,13 L 11,13 11,1.999 0,1.999 Z"/>
-              <GeometryDrawing Brush="#00FFFFFF" Geometry="F1 M 16,16 L 0,16 0,0 16,0 Z"/>
-              <GeometryDrawing Brush="#FF00529C"
-                               Geometry="F1 M 7.21,11.0039 L 6.022,10.9789 7.943,8.0219 9.104,8.0219 M 6,4.9999 L 9,4.9999 9,5.9999 6,5.9999 M 5,5.9999 L 4,5.9999 4,6.9999 3,6.9999 3,5.9999 2,5.9999 2,4.9999 3,4.9999 3,3.9999 4,3.9999 4,4.9999 5,4.9999 M 5,8.9999 L 2,8.9999 2,7.9999 5,7.9999 M 5,10.9999 L 2,10.9999 2,9.9999 5,9.9999 M 1,11.9999 L 10,11.9999 10,2.9999 1,2.9999 Z"/>
-              <GeometryDrawing Brush="#FFF0EFF1" Geometry="F1 M 4,4 L 3,4 3,5 2,5 2,6 3,6 3,7 4,7 4,6 5,6 5,5 4,5 Z"/>
-              <GeometryDrawing Brush="#FFF0EFF1" Geometry="F1 M 2,9 L 5.001,9 5.001,8 2,8 Z"/>
-              <GeometryDrawing Brush="#FFF0EFF1" Geometry="F1 M 2,11 L 5.001,11 5.001,10 2,10 Z"/>
-              <GeometryDrawing Brush="#FFF0EFF1" Geometry="F1 M 6,6 L 9,6 9,5 6,5 Z"/>
-              <GeometryDrawing Brush="#FFF0EFF1" Geometry="F1 M 7.21,11.0039 L 6.022,10.9789 7.943,8.0219 9.104,8.0219 Z"/>
-            </DrawingGroup.Children>
+            <DrawingGroup x:Name="canvas">
+              <GeometryDrawing Brush="{DynamicResource canvas}" Geometry="F1 M 16,16 L 0,16 0,0 16,0 Z"/>
+            </DrawingGroup>
+            <DrawingGroup x:Name="level_1">
+              <GeometryDrawing Brush="{DynamicResource light-blue-10}" Geometry="F1 M 1.5,1.5 L 1.5,14.5 14.5,14.5 14.5,1.5 Z"/>
+              <GeometryDrawing Brush="{DynamicResource light-blue}"
+                               Geometry="F1 M 14.5,1 L 1.5,1 1,1.5 1,14.5 1.5,15 14.5,15 15,14.5 15,1.5 M 14,14 L 2,14 2,2 14,2 Z"/>
+              <GeometryDrawing Brush="{DynamicResource light-blue}"
+                               Geometry="F1 M 8,6 L 6,6 6,8 5,8 5,6 3,6 3,5 5,5 5,3 6,3 6,5 8,5 M 13,5 L 9,5 9,6 13,6 M 7.5,10 L 3.5,10 3.5,11 7.5,11 M 7.5,13 L 3.5,13 3.5,12 7.5,12 M 9,13 L 10.155,13 12.464,9 11.309,9 Z"/>
+            </DrawingGroup>
           </DrawingGroup>
         </DrawingBrush.Drawing>
       </DrawingBrush>

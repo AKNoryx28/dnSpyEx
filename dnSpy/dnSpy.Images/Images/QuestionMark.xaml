@@ -1,17 +1,23 @@
 <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-         Width="16" Height="16">
-  <Rectangle Width="16" Height="16">
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:System="clr-namespace:System;assembly=mscorlib"
+         Width="16 " Height="16">
+  <Rectangle Width="16 " Height="16">
+    <FrameworkElement.Resources>
+      <SolidColorBrush x:Key="canvas" Opacity="0"/>
+      <SolidColorBrush x:Key="light-defaultgrey" Color="#212121" Opacity="1"/>
+    </FrameworkElement.Resources>
     <Shape.Fill>
-      <DrawingBrush>
+      <DrawingBrush Stretch="None">
         <DrawingBrush.Drawing>
           <DrawingGroup>
-            <DrawingGroup.Children>
-              <GeometryDrawing Brush="#00FFFFFF" Geometry="F1 M 16,16 L 0,16 0,0 16,0 Z"/>
-              <GeometryDrawing Brush="#FFF6F6F6"
-                               Geometry="F1 M 10,14 L 6,14 6,9 C 6,8.232 6.29,7.531 6.765,7 L 4,7 4,5 C 4,3.262 5.682,2 8,2 10.316,2 12,3.262 12,5 L 12,7 C 12,8.304 11.164,9.416 10,9.828 Z"/>
-              <GeometryDrawing Brush="#FF414141"
-                               Geometry="F1 M 9,11 L 7,11 7,13 9,13 M 9,10 L 7,10 7,9 C 7,7.897 7.897,7 9,7 L 9,5.203 C 8.84,5.115 8.495,5 8,5 7.504,5 7.159,5.115 7,5.203 L 7,6 5,6 5,5 C 5,3.841 6.261,3 8,3 9.738,3 11,3.841 11,5 L 11,7 C 11,8.103 10.102,9 9,9 Z"/>
-            </DrawingGroup.Children>
+            <DrawingGroup x:Name="canvas">
+              <GeometryDrawing Brush="{DynamicResource canvas}" Geometry="F1 M 16,16 L 0,16 0,0 16,0 Z"/>
+            </DrawingGroup>
+            <DrawingGroup x:Name="level_1">
+              <GeometryDrawing Brush="{DynamicResource light-defaultgrey}"
+                               Geometry="F1 M 10.6,4.725 C 10.6,6.218 9.615,6.846 8.764,7.725 A 2.153,2.153 0 0 0 8.12,9.685 L 6.88,9.685 A 3.99,3.99 0 0 1 7.064,8.052 3.962,3.962 0 0 1 8.12,6.637 5.061,5.061 0 0 0 9.176,5.461 1.806,1.806 0 0 0 8.227,3.011 1.861,1.861 0 0 0 5.64,4.725 L 4.4,4.725 A 3.1,3.1 0 0 1 10.6,4.725 M 7.5,11.5 A 1,1 0 1 0 8.5,12.5 1,1 0 0 0 7.5,11.5 Z"/>
+            </DrawingGroup>
           </DrawingGroup>
         </DrawingBrush.Drawing>
       </DrawingBrush>

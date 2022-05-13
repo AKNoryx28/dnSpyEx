@@ -6,7 +6,7 @@
     <FrameworkElement.Resources>
       <SolidColorBrush x:Key="canvas" Opacity="0"/>
       <SolidColorBrush x:Key="light-yellow-10" Color="#996f00" Opacity="0.1"/>
-      <SolidColorBrush x:Key="light-yellow-25" Color="#996f00" Opacity="0.25"/>
+      <SolidColorBrush x:Key="light-yellow-50" Color="#996f00" Opacity="0.5"/>
       <SolidColorBrush x:Key="light-yellow" Color="#996f00" Opacity="1"/>
       <SolidColorBrush x:Key="light-blue" Color="#005dba" Opacity="1"/>
     </FrameworkElement.Resources>
@@ -20,8 +20,8 @@
             <DrawingGroup x:Name="level_1">
               <GeometryDrawing Brush="{DynamicResource light-yellow-10}"
                                Geometry="F1 M 11.5,6 L 11.5,8 3.431,8 2.967,8.314 1.5,11.981 1.5,4.5 5.5,4.5 7,6 11.5,6 Z"/>
-              <GeometryDrawing Brush="{DynamicResource light-yellow-25}" Geometry="F1 M 14.5,8.5 L 12.5,13.5 1.5,13.5 3.5,8.5 Z"/>
-              <GeometryDrawing Brush="{DynamicResource light-yellow-25}" Geometry="F1 M 12,13 L 11,13 11,9 12,9 Z"/>
+              <GeometryDrawing Brush="{DynamicResource light-yellow-50}" Geometry="F1 M 14.5,8.5 L 12.5,13.5 1.5,13.5 3.5,8.5 Z"/>
+              <GeometryDrawing Brush="{DynamicResource light-yellow-50}" Geometry="F1 M 12,13 L 11,13 11,9 12,9 Z"/>
               <GeometryDrawing Brush="{DynamicResource light-yellow}"
                                Geometry="F1 M 14.431,8 L 12,8 12,5.5 11.5,5 11,5 11,8 3.431,8 2.967,8.314 2,10.8 2,5 5.293,5 6.293,6 8,6 8,5 6.707,5 5.854,4.146 5.5,4 1.5,4 1,4.5 1,13.364 1.431,14 12.431,14 12.895,13.686 14.895,8.686 M 12.092,13 L 2.169,13 3.769,9 13.691,9 Z"/>
               <GeometryDrawing Brush="{DynamicResource light-blue}"
