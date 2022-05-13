@@ -1741,7 +1741,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 
 		sealed class EnumNameCollection<T> : IEnumerable<KeyValuePair<long, string>> where T : struct
 		{
-			List<KeyValuePair<long, string>> names = new List<KeyValuePair<long, string>>();
+			readonly List<KeyValuePair<long, string>> names = new List<KeyValuePair<long, string>>();
 
 			public void Add(T flag, string name)
 			{
