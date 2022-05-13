@@ -1,14 +1,14 @@
 // Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -105,7 +105,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			AccumulateSelfAndChildrenRecursive(result, predicate);
 			return result;
 		}
-		
+
 		void AccumulateSelfAndChildrenRecursive<T>(List<T> list, Func<T, bool> predicate) where T:ILNode
 		{
 			// Note: RemoveEndFinally depends on self coming before children
@@ -133,7 +133,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return false;
 			}
 		}
-		
+
 		public ILNode GetChildren()
 		{
 			return this;
@@ -198,7 +198,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			WriteTo(output, null);
 			return output.ToString().Replace("\r\n", "; ");
 		}
-		
+
 		public abstract void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder);
 
 		protected void UpdateDebugInfo(MethodDebugInfoBuilder builder, int startLoc, int endLoc, IEnumerable<ILSpan> ranges)
@@ -241,7 +241,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			output.WriteLine();
 		}
 	}
-	
+
 	public abstract class ILBlockBase: ILNode
 	{
 		public List<ILNode> Body;
@@ -288,7 +288,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return this.Body[index++];
 			return null;
 		}
-		
+
 		public override void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder)
 		{
 			WriteTo(output, builder, null);
@@ -305,7 +305,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			WriteHiddenEnd(output, builder, info, CodeBracesRangeFlags);
 		}
 	}
-	
+
 	public class ILBlock: ILBlockBase
 	{
 		protected override CodeBracesRangeFlags CodeBracesRangeFlags => codeBracesRangeFlags;
@@ -367,7 +367,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			UpdateDebugInfo(builder, location, output.NextPosition, ILSpans);
 		}
 	}
-	
+
 	public class ILTryCatchBlock: ILNode
 	{
 		public abstract class CatchBlockBase: ILBlock {
@@ -401,7 +401,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			public CatchBlock(bool calculateILSpans, List<ILNode> body) : base(calculateILSpans, body)
 			{
 			}
-			
+
 			public override void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder)
 			{
 				FilterBlock?.WriteTo(output, builder);
@@ -445,12 +445,12 @@ namespace ICSharpCode.Decompiler.ILAst {
 				base.WriteTo(output, builder);
 			}
 		}
-		
+
 		public ILBlock          TryBlock;
 		public List<CatchBlock> CatchBlocks;
 		public ILBlock          FinallyBlock;
 		public ILBlock          FaultBlock;
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index == 0) {
@@ -502,7 +502,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 	}
-	
+
 	public class ILVariable
 	{
 		[Flags]
@@ -571,48 +571,48 @@ namespace ICSharpCode.Decompiler.ILAst {
 		public bool IsPinned {
 			get { return OriginalVariable != null && OriginalVariable.Type is PinnedSig; }
 		}
-		
+
 		public bool IsParameter {
 			get { return OriginalParameter != null; }
 		}
-		
+
 		public override string ToString()
 		{
 			return Name;
 		}
 	}
-	
+
 	public class ILExpressionPrefix
 	{
 		public readonly ILCode Code;
 		public readonly object Operand;
-		
+
 		public ILExpressionPrefix(ILCode code, object operand = null)
 		{
 			this.Code = code;
 			this.Operand = operand;
 		}
 	}
-	
+
 	public class ILExpression : ILNode
 	{
 		public ILCode Code { get; set; }
 		public object Operand { get; set; }
 		public List<ILExpression> Arguments { get; }
 		public ILExpressionPrefix[] Prefixes { get; set; }
-		
+
 		public TypeSig ExpectedType { get; set; }
 		public TypeSig InferredType { get; set; }
 
 		public override bool SafeToAddToEndILSpans {
 			get { return true; }
 		}
-		
+
 		public ILExpression(ILCode code, object operand, List<ILExpression> args)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
 			this.Arguments = new List<ILExpression>(args);
@@ -622,7 +622,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
 			this.Arguments = new List<ILExpression>();
@@ -632,42 +632,42 @@ namespace ICSharpCode.Decompiler.ILAst {
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
-			this.Arguments = new List<ILExpression>() { arg1 };
+			this.Arguments = new List<ILExpression>(1) { arg1 };
 		}
 
 		public ILExpression(ILCode code, object operand, ILExpression arg1, ILExpression arg2)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
-			this.Arguments = new List<ILExpression>() { arg1, arg2 };
+			this.Arguments = new List<ILExpression>(2) { arg1, arg2 };
 		}
 
 		public ILExpression(ILCode code, object operand, ILExpression arg1, ILExpression arg2, ILExpression arg3)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
-			this.Arguments = new List<ILExpression>() { arg1, arg2, arg3 };
+			this.Arguments = new List<ILExpression>(3) { arg1, arg2, arg3 };
 		}
 
 		public ILExpression(ILCode code, object operand, ILExpression[] args)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
 			this.Arguments = new List<ILExpression>(args);
 		}
-		
+
 		public ILExpressionPrefix GetPrefix(ILCode code)
 		{
 			var prefixes = this.Prefixes;
@@ -679,19 +679,19 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return null;
 		}
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index < Arguments.Count)
 				return Arguments[index++];
 			return null;
 		}
-		
+
 		public bool IsBranch()
 		{
 			return this.Operand is ILLabel || this.Operand is ILLabel[];
 		}
-		
+
 		public IEnumerable<ILLabel> GetBranchTargets()
 		{
 			if (this.Operand is ILLabel) {
@@ -739,7 +739,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return;
 				}
 			}
-			
+
 			if (this.Prefixes != null) {
 				foreach (var prefix in this.Prefixes) {
 					var prefixName = prefix.Code.GetName() + ".";
@@ -747,7 +747,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					output.Write(" ", BoxedTextColor.Text);
 				}
 			}
-			
+
 			var codeName = Code.GetName();
 			output.Write(codeName, codeName, DecompilerReferenceFlags.Local, BoxedTextColor.OpCode);
 			if (this.InferredType != null) {
@@ -807,12 +807,12 @@ namespace ICSharpCode.Decompiler.ILAst {
 			UpdateDebugInfo(builder, startLoc, output.NextPosition, this.GetSelfAndChildrenRecursiveILSpans());
 		}
 	}
-	
+
 	public class ILWhileLoop : ILNode
 	{
 		public ILExpression Condition;
 		public ILBlock      BodyBlock;
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index == 0) {
@@ -847,13 +847,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 			this.BodyBlock.WriteTo(output, builder);
 		}
 	}
-	
+
 	public class ILCondition : ILNode
 	{
 		public ILExpression Condition;
 		public ILBlock TrueBlock;   // Branch was taken
 		public ILBlock FalseBlock;  // Fall-though
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index == 0) {
@@ -896,14 +896,14 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 	}
-	
+
 	public class ILSwitch: ILNode
 	{
 		public class CaseBlock: ILBlock
 		{
 			protected override CodeBracesRangeFlags CodeBracesRangeFlags => CodeBracesRangeFlags.CaseBraces;
 			public List<int> Values;  // null for the default case
-			
+
 			public override void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder)
 			{
 				if (this.Values != null) {
@@ -922,7 +922,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				output.DecreaseIndent();
 			}
 		}
-		
+
 		public ILExpression Condition;
 		public List<CaseBlock> CaseBlocks = new List<CaseBlock>();
 		public List<ILSpan> endILSpans = new List<ILSpan>(1);
@@ -945,7 +945,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 		public override bool SafeToAddToEndILSpans {
 			get { return true; }
 		}
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index == 0) {
@@ -956,7 +956,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return this.CaseBlocks[index++ - 1];
 			return null;
 		}
-		
+
 		public override void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder)
 		{
 			var startLoc = output.NextPosition;
@@ -978,12 +978,12 @@ namespace ICSharpCode.Decompiler.ILAst {
 			WriteHiddenEnd(output, builder, info, CodeBracesRangeFlags.SwitchBraces);
 		}
 	}
-	
+
 	public class ILFixedStatement : ILNode
 	{
-		public List<ILExpression> Initializers = new List<ILExpression>();
+		public List<ILExpression> Initializers = new List<ILExpression>(1);
 		public ILBlock      BodyBlock;
-		
+
 		internal override ILNode GetNext(ref int index)
 		{
 			if (index < this.Initializers.Count)

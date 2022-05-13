@@ -1652,7 +1652,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 		/// </summary>
 		void SplitToBasicBlocks(ILBlock block)
 		{
-			List<ILNode> basicBlocks = new List<ILNode>();
+			List<ILNode> basicBlocks = new List<ILNode>(1);
 
 			ILLabel entryLabel = block.Body.FirstOrDefault() as ILLabel ?? new ILLabel() { Name = "Block_" + (nextLabelIndex++).ToString() };
 			ILBasicBlock basicBlock = new ILBasicBlock();

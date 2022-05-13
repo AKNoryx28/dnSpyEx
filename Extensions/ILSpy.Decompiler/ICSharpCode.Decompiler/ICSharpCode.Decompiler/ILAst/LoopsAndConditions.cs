@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -29,11 +29,11 @@ namespace ICSharpCode.Decompiler.ILAst {
 	public class LoopsAndConditions
 	{
 		readonly Dictionary<ILLabel, ControlFlowNode> labelToCfNode = new Dictionary<ILLabel, ControlFlowNode>();
-		
+
 		DecompilerContext context;
-		
+
 		uint nextLabelIndex;
-		
+
 		public LoopsAndConditions(DecompilerContext context)
 		{
 			Initialize(context);
@@ -45,7 +45,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			this.labelToCfNode.Clear();
 			this.nextLabelIndex = 0;
 		}
-		
+
 		public void FindLoops(ILBlock block)
 		{
 			if (block.Body.Count > 0) {
@@ -57,7 +57,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				block.Body = FindLoops(new HashSet<ControlFlowNode>(graph.Nodes.Skip(3)), graph.EntryPoint, false);
 			}
 		}
-		
+
 		public void FindConditions(ILBlock block)
 		{
 			if (block.Body.Count > 0) {
@@ -92,13 +92,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 				cfNodes.Add(cfNode);
 				astNodeToCfNode[node] = cfNode;
 				cfNode.UserData = node;
-				
+
 				// Find all contained labels
 				foreach(ILLabel label in node.GetSelfAndChildrenRecursive<ILLabel>(listLabels ?? (listLabels = new List<ILLabel>()))) {
 					labelToCfNode[label] = cfNode;
 				}
 			}
-			
+
 			// Entry endge
 			ControlFlowNode entryNode = labelToCfNode[entryLabel];
 			ControlFlowEdge entryEdge = new ControlFlowEdge(entryPoint, entryNode, JumpType.Normal);
@@ -109,7 +109,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			List<ILExpression> listExpressions = null;
 			foreach(ILBasicBlock node in nodes) {
 				ControlFlowNode source = astNodeToCfNode[node];
-				
+
 				// Find all branches
 				foreach(ILLabel target in node.GetSelfAndChildrenRecursive<ILExpression>(listExpressions ?? (listExpressions = new List<ILExpression>()), e => e.IsBranch()).SelectMany(e => e.GetBranchTargets())) {
 					ControlFlowNode destination;
@@ -125,26 +125,26 @@ namespace ICSharpCode.Decompiler.ILAst {
 
 			return cached_ControlFlowGraph;
 		}
-		
+
 		List<ILNode> FindLoops(HashSet<ControlFlowNode> scope, ControlFlowNode entryPoint, bool excludeEntryPoint)
 		{
 			List<ILNode> result = new List<ILNode>();
-			
+
 			// Do not modify entry data
 			scope = new HashSet<ControlFlowNode>(scope);
-			
+
 			Queue<ControlFlowNode> agenda  = new Queue<ControlFlowNode>();
 			agenda.Enqueue(entryPoint);
 			while(agenda.Count > 0) {
 				ControlFlowNode node = agenda.Dequeue();
-				
+
 				// If the node is a loop header
 				if (scope.Contains(node)
 				    && node.DominanceFrontier.Contains(node)
 				    && (node != entryPoint || !excludeEntryPoint))
 				{
 					HashSet<ControlFlowNode> loopContents = FindLoopContent(scope, node);
-					
+
 					// If the first expression is a loop condition
 					ILBasicBlock basicBlock = (ILBasicBlock)node.UserData;
 					ILExpression condExpr;
@@ -157,14 +157,14 @@ namespace ICSharpCode.Decompiler.ILAst {
 						labelToCfNode.TryGetValue(trueLabel, out trueTarget);
 						ControlFlowNode falseTarget;
 						labelToCfNode.TryGetValue(falseLabel, out falseTarget);
-						
+
 						// If one point inside the loop and the other outside
 						if ((!loopContents.Contains(trueTarget) && loopContents.Contains(falseTarget)) ||
 						    (loopContents.Contains(trueTarget) && !loopContents.Contains(falseTarget)) )
 						{
 							loopContents.RemoveOrThrow(node);
 							scope.RemoveOrThrow(node);
-							
+
 							// If false means enter the loop
 							if (loopContents.Contains(falseTarget) || falseTarget == node)
 							{
@@ -174,7 +174,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 								trueLabel = falseLabel;
 								falseLabel = tmp;
 							}
-							
+
 							ControlFlowNode postLoopTarget;
 							labelToCfNode.TryGetValue(falseLabel, out postLoopTarget);
 							if (postLoopTarget != null) {
@@ -183,7 +183,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 								var pullIn = scope.Except(postLoopContents).Where(n => node.Dominates(n));
 								loopContents.UnionWith(pullIn);
 							}
-							
+
 							// Use loop to implement the brtrue
 							var tail = basicBlock.Body.RemoveTail(ILCode.Brtrue, ILCode.Br);
 							ILWhileLoop whileLoop;
@@ -200,15 +200,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 							}
 							basicBlock.Body.Add(new ILExpression(ILCode.Br, falseLabel));
 							result.Add(basicBlock);
-							
+
 							scope.ExceptWith(loopContents);
 						}
 					}
-					
+
 					// Fallback method: while(true)
 					if (scope.Contains(node)) {
 						result.Add(new ILBasicBlock() {
-							Body = new List<ILNode>() {
+							Body = new List<ILNode>(2) {
 								new ILLabel() { Name = "Loop_" + (nextLabelIndex++).ToString() },
 								new ILWhileLoop() {
 									BodyBlock = new ILBlock(CodeBracesRangeFlags.LoopBraces) {
@@ -218,7 +218,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 								},
 							},
 						});
-						
+
 						scope.ExceptWith(loopContents);
 					}
 				}
@@ -228,40 +228,40 @@ namespace ICSharpCode.Decompiler.ILAst {
 					agenda.Enqueue(child);
 				}
 			}
-			
+
 			// Add whatever is left
 			foreach(var node in scope) {
 				result.Add((ILNode)node.UserData);
 			}
 			scope.Clear();
-			
+
 			return result;
 		}
-		
+
 		List<ILNode> FindConditions(HashSet<ControlFlowNode> scope, ControlFlowNode entryNode)
 		{
 			List<ILNode> result = new List<ILNode>();
-			
+
 			// Do not modify entry data
 			scope = new HashSet<ControlFlowNode>(scope);
-			
+
 			Stack<ControlFlowNode> agenda  = new Stack<ControlFlowNode>();
 			agenda.Push(entryNode);
 			while(agenda.Count > 0) {
 				ControlFlowNode node = agenda.Pop();
-				
+
 				// Find a block that represents a simple condition
 				if (scope.Contains(node)) {
-					
+
 					ILBasicBlock block = (ILBasicBlock)node.UserData;
-					
+
 					{
 						// Switch
 						ILLabel[] caseLabels;
 						ILExpression switchArg;
 						ILLabel fallLabel;
 						if (block.MatchLastAndBr(ILCode.Switch, out caseLabels, out switchArg, out fallLabel)) {
-							
+
 							// Replace the switch code with ILSwitch
 							ILSwitch ilSwitch = new ILSwitch() { Condition = switchArg };
 							var tail = block.Body.RemoveTail(ILCode.Switch, ILCode.Br);
@@ -275,7 +275,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 
 							// Remove the item so that it is not picked up as content
 							scope.RemoveOrThrow(node);
-							
+
 							// Find the switch offset
 							int addValue = 0;
 							List<ILExpression> subArgs;
@@ -288,15 +288,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 										subArgs[i].AddSelfAndChildrenRecursiveILSpans(ilSwitch.Condition.ILSpans);
 								}
 							}
-							
+
 							// Pull in code of cases
 							ControlFlowNode fallTarget = null;
 							labelToCfNode.TryGetValue(fallLabel, out fallTarget);
-							
+
 							HashSet<ControlFlowNode> frontiers = new HashSet<ControlFlowNode>();
 							if (fallTarget != null)
 								frontiers.UnionWith(fallTarget.DominanceFrontier.Except(new [] { fallTarget }));
-							
+
 							foreach(ILLabel condLabel in caseLabels) {
 								ControlFlowNode condTarget;
 								labelToCfNode.TryGetValue(condLabel, out condTarget);
@@ -307,7 +307,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 							bool includedDefault = false;
 							for (int i = 0; i < caseLabels.Length; i++) {
 								ILLabel condLabel = caseLabels[i];
-								
+
 								// Find or create new case block
 								ILSwitch.CaseBlock caseBlock = ilSwitch.CaseBlocks.FirstOrDefault(b => b.EntryGoto.Operand == condLabel);
 								if (caseBlock == null) {
@@ -321,7 +321,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 										block.Body.RemoveTail(ILCode.Br);
 										caseBlock.Values = null;
 									}
-									
+
 									ControlFlowNode condTarget = null;
 									labelToCfNode.TryGetValue(condLabel, out condTarget);
 									if (condTarget != null && !frontiers.Contains(condTarget)) {
@@ -339,7 +339,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 								}
 								caseBlock.Values?.Add(i + addValue);
 							}
-							
+
 							// Heuristis to determine if we want to use fallthough as default case
 							if (!includedDefault && fallTarget != null && !frontiers.Contains(fallTarget)) {
 								HashSet<ControlFlowNode> content = FindDominatedNodes(scope, fallTarget);
@@ -349,7 +349,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 									tail = block.Body.RemoveTail(ILCode.Br);
 									if (context.CalculateILSpans)
 										tail[0].AddSelfAndChildrenRecursiveILSpans(caseBlock.ILSpans);
-									
+
 									scope.ExceptWith(content);
 									caseBlock.Body.AddRange(FindConditions(content, fallTarget));
 									// Add explicit break which should not be used by default, but the goto removal might decide to use it
@@ -362,19 +362,19 @@ namespace ICSharpCode.Decompiler.ILAst {
 								}
 							}
 						}
-						
+
 						// Two-way branch
 						ILExpression condExpr;
 						ILLabel trueLabel;
 						ILLabel falseLabel;
 						if(block.MatchLastAndBr(ILCode.Brtrue, out trueLabel, out condExpr, out falseLabel)) {
-							
+
 							// Swap bodies since that seems to be the usual C# order
 							ILLabel temp = trueLabel;
 							trueLabel = falseLabel;
 							falseLabel = temp;
 							condExpr = new ILExpression(ILCode.LogicNot, null, condExpr);
-							
+
 							// Convert the brtrue to ILCondition
 							ILCondition ilCond = new ILCondition() {
 								Condition  = condExpr,
@@ -388,15 +388,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 							}
 							block.Body.Add(ilCond);
 							result.Add(block);
-							
+
 							// Remove the item immediately so that it is not picked up as content
 							scope.RemoveOrThrow(node);
-							
+
 							ControlFlowNode trueTarget = null;
 							labelToCfNode.TryGetValue(trueLabel, out trueTarget);
 							ControlFlowNode falseTarget = null;
 							labelToCfNode.TryGetValue(falseLabel, out falseTarget);
-							
+
 							// Pull in the conditional code
 							if (trueTarget != null && HasSingleEdgeEnteringBlock(trueTarget)) {
 								HashSet<ControlFlowNode> content = FindDominatedNodes(scope, trueTarget);
@@ -410,7 +410,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 							}
 						}
 					}
-					
+
 					// Add the node now so that we have good ordering
 					if (scope.Contains(node)) {
 						result.Add((ILNode)node.UserData);
@@ -423,41 +423,41 @@ namespace ICSharpCode.Decompiler.ILAst {
 					agenda.Push(node.DominatorTreeChildren[i]);
 				}
 			}
-			
+
 			// Add whatever is left
 			foreach(var node in scope) {
 				result.Add((ILNode)node.UserData);
 			}
-			
+
 			return result;
 		}
-		
+
 		static bool HasSingleEdgeEnteringBlock(ControlFlowNode node)
 		{
 			return node.Incoming.Count(edge => !node.Dominates(edge.Source)) == 1;
 		}
-		
+
 		static HashSet<ControlFlowNode> FindDominatedNodes(HashSet<ControlFlowNode> scope, ControlFlowNode head)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
 			HashSet<ControlFlowNode> agenda = new HashSet<ControlFlowNode>();
 			HashSet<ControlFlowNode> result = new HashSet<ControlFlowNode>();
 			agenda.Add(head);
-			
+
 			while(agenda.Count > 0) {
 				ControlFlowNode addNode = agenda.First();
 				agenda.Remove(addNode);
-				
+
 				if (scope.Contains(addNode) && head.Dominates(addNode) && result.Add(addNode)) {
 					for (int i = 0; i < addNode.Outgoing.Count; i++) {
 						agenda.Add(addNode.Outgoing[i].Target);
 					}
 				}
 			}
-			
+
 			return result;
 		}
-		
+
 		static HashSet<ControlFlowNode> FindLoopContent(HashSet<ControlFlowNode> scope, ControlFlowNode head)
 		{
 			HashSet<ControlFlowNode> agenda = new HashSet<ControlFlowNode>();
@@ -467,11 +467,11 @@ namespace ICSharpCode.Decompiler.ILAst {
 					agenda.Add(p);
 			}
 			HashSet<ControlFlowNode> result = new HashSet<ControlFlowNode>();
-			
+
 			while(agenda.Count > 0) {
 				ControlFlowNode addNode = agenda.First();
 				agenda.Remove(addNode);
-				
+
 				if (scope.Contains(addNode) && head.Dominates(addNode) && result.Add(addNode)) {
 					for (int i = 0; i < addNode.Incoming.Count; i++)
 						agenda.Add(addNode.Incoming[i].Source);
@@ -479,7 +479,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			if (scope.Contains(head))
 				result.Add(head);
-			
+
 			return result;
 		}
 	}

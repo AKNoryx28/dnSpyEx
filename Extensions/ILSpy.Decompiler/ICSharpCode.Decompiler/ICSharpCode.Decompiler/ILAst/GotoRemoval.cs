@@ -200,21 +200,21 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// The simulated path always has to start in the same try-block
 			// in other for the same finally blocks to be executed.
 
-			if (target == Exit(gotoExpr, new HashSet<ILNode>() { gotoExpr })) {
+			if (target == Exit(gotoExpr, new HashSet<ILNode>(1) { gotoExpr })) {
 				gotoExpr.Code = ILCode.Nop;
 				gotoExpr.Operand = null;
 				return true;
 			}
 
 			ILNode breakBlock = GetParents(gotoExpr).FirstOrDefault(n => n is ILWhileLoop || n is ILSwitch);
-			if (breakBlock != null && target == Exit(breakBlock, new HashSet<ILNode>() { gotoExpr })) {
+			if (breakBlock != null && target == Exit(breakBlock, new HashSet<ILNode>(1) { gotoExpr })) {
 				gotoExpr.Code = ILCode.LoopOrSwitchBreak;
 				gotoExpr.Operand = null;
 				return true;
 			}
 
 			ILNode continueBlock = GetParents(gotoExpr).FirstOrDefault(n => n is ILWhileLoop);
-			if (continueBlock != null && target == Enter(continueBlock, new HashSet<ILNode>() { gotoExpr })) {
+			if (continueBlock != null && target == Enter(continueBlock, new HashSet<ILNode>(1) { gotoExpr })) {
 				gotoExpr.Code = ILCode.LoopContinue;
 				gotoExpr.Operand = null;
 				return true;
@@ -276,10 +276,10 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return Exit(expr, visitedNodes);
 				} else if (expr.Code == ILCode.LoopOrSwitchBreak) {
 					ILNode breakBlock = GetParents(expr).First(n => n is ILWhileLoop || n is ILSwitch);
-					return Exit(breakBlock, new HashSet<ILNode>() { expr });
+					return Exit(breakBlock, new HashSet<ILNode>(1) { expr });
 				} else if (expr.Code == ILCode.LoopContinue) {
 					ILNode continueBlock = GetParents(expr).First(n => n is ILWhileLoop);
-					return Enter(continueBlock, new HashSet<ILNode>() { expr });
+					return Enter(continueBlock, new HashSet<ILNode>(1) { expr });
 				} else {
 					return expr;
 				}

@@ -691,7 +691,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					(md = GetMethodDefinition(method)) == null || !finallyMethodToStateRange.ContainsKey(md))
 					throw new SymbolicAnalysisFailedException();
 				if (finallyMethodIndexes == null)
-					finallyMethodIndexes = new List<int>() { brTargetIndex };
+					finallyMethodIndexes = new List<int>(1) { brTargetIndex };
 				else if (!finallyMethodIndexes.Contains(brTargetIndex))
 					finallyMethodIndexes.Add(brTargetIndex);
 

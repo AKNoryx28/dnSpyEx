@@ -281,6 +281,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// Create temporary structure for the stack analysis
 			StackAnalysis_body.Clear();
 			List<Instruction> prefixes = null;
+			var methodHasReturnType = methodDef.HasReturnType;
 			var instructions = methodDef.Body.Instructions;
 			int instructionsCount = instructions.Count;
 			var inst = 0 < instructionsCount ? instructions[0] : null;
@@ -301,7 +302,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					code = codeBkp;
 					operand = inst.Operand;
 				}
-				inst.CalculateStackUsage(methodDef.HasReturnType, out int pushCount, out int popCount);
+				inst.CalculateStackUsage(methodHasReturnType, out int pushCount, out int popCount);
 				ByteCode byteCode = new ByteCode() {
 					Offset      = inst.Offset,
 					EndOffset   = next?.Offset ?? (uint)methodDef.Body.GetCodeSize(),
@@ -338,11 +339,14 @@ namespace ICSharpCode.Decompiler.ILAst {
 			var exceptionHandlerStarts = new HashSet<ByteCode>(methodDef.Body.ExceptionHandlers.Select(eh => eh.HandlerStart == null ? null : instrToByteCode[eh.HandlerStart]));
 			exceptionHandlerStarts.Remove(null);
 
+			// We do not need a range check as the body will always have at least one bytecode at this point.
+			var firstByteCode = StackAnalysis_body[0];
+
 			// HACK: Some MS reference assemblies contain just a RET instruction. If the method
 			// returns a value, the code below will eventually throw an exception in
 			// StackSlot.ModifyStack().
-			if (StackAnalysis_body.Count == 1 && StackAnalysis_body[0].Code == ILCode.Ret)
-				StackAnalysis_body[0].PopCount = 0;
+			if (StackAnalysis_body.Count == 1 && firstByteCode.Code == ILCode.Ret)
+				firstByteCode.PopCount = 0;
 
 			// Add known states
 			if(methodDef.Body.HasExceptionHandlers) {
@@ -381,9 +385,9 @@ namespace ICSharpCode.Decompiler.ILAst {
 				}
 			}
 
-			StackAnalysis_body[0].StackBefore = Array.Empty<StackSlot>();
-			StackAnalysis_body[0].VariablesBefore = VariableSlot.MakeUknownState(varCount);
-			agenda.Push(StackAnalysis_body[0]);
+			firstByteCode.StackBefore = Array.Empty<StackSlot>();
+			firstByteCode.VariablesBefore = VariableSlot.MakeUknownState(varCount);
+			agenda.Push(firstByteCode);
 
 			// Process agenda
 			while(agenda.Count > 0) {
@@ -412,8 +416,8 @@ namespace ICSharpCode.Decompiler.ILAst {
 						branchTargets.Add(byteCode.Next);
 					}
 				}
-				if (byteCode.Operand is IList<Instruction>) {
-					foreach(Instruction inst2 in (IList<Instruction>)byteCode.Operand) {
+				if (byteCode.Operand is IList<Instruction> instrsOperand) {
+					foreach(Instruction inst2 in instrsOperand) {
 						ByteCode target = instrToByteCode[inst2];
 						branchTargets.Add(target);
 						// The target of a branch must have label
@@ -421,8 +425,8 @@ namespace ICSharpCode.Decompiler.ILAst {
 							target.Label = new ILLabel() { Name = target.Name, Offset = target.Offset };
 						}
 					}
-				} else if (byteCode.Operand is Instruction) {
-					ByteCode target = instrToByteCode[(Instruction)byteCode.Operand];
+				} else if (byteCode.Operand is Instruction instrOperand) {
+					ByteCode target = instrToByteCode[instrOperand];
 					branchTargets.Add(target);
 					// The target of a branch must have label
 					if (target.Label == null) {
@@ -583,14 +587,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 
 			// Convert branch targets to labels
 			foreach (ByteCode byteCode in StackAnalysis_body) {
-				if (byteCode.Operand is IList<Instruction>) {
+				if (byteCode.Operand is IList<Instruction> instrsOp) {
 					StackAnalysis_List_ILLabel.Clear();
-					var oldList = (IList<Instruction>)byteCode.Operand;
-					for (int i = 0; i < oldList.Count; i++)
-						StackAnalysis_List_ILLabel.Add(instrToByteCode[oldList[i]].Label);
+					for (int i = 0; i < instrsOp.Count; i++)
+						StackAnalysis_List_ILLabel.Add(instrToByteCode[instrsOp[i]].Label);
 					byteCode.Operand = StackAnalysis_List_ILLabel.ToArray();
-				} else if (byteCode.Operand is Instruction) {
-					byteCode.Operand = instrToByteCode[(Instruction)byteCode.Operand].Label;
+				} else if (byteCode.Operand is Instruction instrOp) {
+					byteCode.Operand = instrToByteCode[instrOp].Label;
 				}
 			}
 
@@ -747,7 +750,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 							Type = varDef.Type,
 							OriginalVariable = varDef
 					    },
-					    Defs = new List<ByteCode>() { def },
+					    Defs = new List<ByteCode>(1) { def },
 					    Uses  = new List<ByteCode>()
 					}).ToList();
 
