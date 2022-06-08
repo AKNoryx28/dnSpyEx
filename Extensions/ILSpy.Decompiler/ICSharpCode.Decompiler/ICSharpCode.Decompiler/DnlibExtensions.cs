@@ -288,11 +288,13 @@ namespace ICSharpCode.Decompiler {
 			return false;
 		}
 
+		static readonly UTF8String dynamicCallSiteTypeName = new UTF8String("<>o");
+
 		public static bool IsDynamicCallSiteContainerType(this ITypeDefOrRef type)
 		{
 			if (type == null)
 				return false;
-			return type.Name == "<>o" || type.Name.StartsWith("<>o__");
+			return type.Name == dynamicCallSiteTypeName || type.Name.StartsWith("<>o__");
 		}
 
 		public static bool IsAnonymousType(this ITypeDefOrRef type)
@@ -302,7 +304,7 @@ namespace ICSharpCode.Decompiler {
 			if (!string.IsNullOrEmpty(type.GetNamespaceInternal()))
 				return false;
 			string name = type.Name;
-			if (name.StartsWith("VB$AnonymousType_")|| (type.HasGeneratedName() && (name.Contains("AnonType") || name.Contains("AnonymousType")))) {
+			if (name.StartsWith("VB$AnonymousType_", StringComparison.Ordinal) || (type.HasGeneratedName() && (name.Contains("AnonType") || name.Contains("AnonymousType")))) {
 				TypeDef td = type.ResolveTypeDef();
 				return td != null && td.IsCompilerGenerated();
 			}
@@ -319,7 +321,7 @@ namespace ICSharpCode.Decompiler {
 
 		public static bool IsLocalFunction(this MethodDef method) {
 			var name = method.Name.String;
-			return name.StartsWith("<") && name.Contains(">g__");
+			return name.StartsWith("<", StringComparison.Ordinal) && name.Contains(">g__");
 		}
 
 		public static bool ContainsAnonymousType(this TypeSig type)
@@ -554,11 +556,11 @@ namespace ICSharpCode.Decompiler {
 			PrintArgs(sb, methodSig.Params, true);
 			if (methodSig.ParamsAfterSentinel != null) {
 				if (methodSig.Params.Count > 0)
-					sb.Append(",");
+					sb.Append(',');
 				sb.Append("...,");
 				PrintArgs(sb, methodSig.ParamsAfterSentinel, false);
 			}
-			sb.Append(")");
+			sb.Append(')');
 
 			return sb.ToString();
 		}
@@ -570,15 +572,15 @@ namespace ICSharpCode.Decompiler {
 			var sb = new StringBuilder();
 
 			FullNameFactory.FullNameSB(methodSig.RetType, false, null, null, null, sb);
-			sb.Append("(");
+			sb.Append('(');
 			PrintArgs(sb, methodSig.Params, true);
 			if (methodSig.ParamsAfterSentinel != null) {
 				if (methodSig.Params.Count > 0)
-					sb.Append(",");
+					sb.Append(',');
 				sb.Append("...,");
 				PrintArgs(sb, methodSig.ParamsAfterSentinel, false);
 			}
-			sb.Append(")");
+			sb.Append(')');
 
 			return sb.ToString();
 		}
@@ -586,7 +588,7 @@ namespace ICSharpCode.Decompiler {
 		static void PrintArgs(StringBuilder sb, IList<TypeSig> args, bool isFirst) {
 			foreach (var arg in args) {
 				if (!isFirst)
-					sb.Append(",");
+					sb.Append(',');
 				isFirst = false;
 				FullNameFactory.FullNameSB(arg, false, null, null, null, sb);
 			}

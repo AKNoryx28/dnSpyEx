@@ -139,14 +139,14 @@ namespace ICSharpCode.Decompiler.ILAst {
 							if (inst == null)
 								continue;
 							sb.Append("IL_" + inst.Offset.ToString("X2"));
-							sb.Append(" ");
+							sb.Append(' ');
 						}
 					} else if (this.Operand is ILLabel) {
 						sb.Append(((ILLabel)this.Operand).Name);
 					} else if (this.Operand is ILLabel[]) {
 						foreach(ILLabel label in (ILLabel[])this.Operand) {
 							sb.Append(label.Name);
-							sb.Append(" ");
+							sb.Append(' ');
 						}
 					} else {
 						sb.Append(this.Operand.ToString());
@@ -157,47 +157,47 @@ namespace ICSharpCode.Decompiler.ILAst {
 					sb.Append(" StackBefore={");
 					bool first = true;
 					foreach (StackSlot slot in this.StackBefore) {
-						if (!first) sb.Append(",");
+						if (!first) sb.Append(',');
 						bool first2 = true;
 						foreach(ByteCode defs in slot.Definitions) {
-							if (!first2) sb.Append("|");
+							if (!first2) sb.Append('|');
 							sb.AppendFormat("IL_{0:X2}", defs.Offset);
 							first2 = false;
 						}
 						first = false;
 					}
-					sb.Append("}");
+					sb.Append('}');
 				}
 
 				if (this.StoreTo != null && this.StoreTo.Count > 0) {
 					sb.Append(" StoreTo={");
 					bool first = true;
 					foreach (ILVariable stackVar in this.StoreTo) {
-						if (!first) sb.Append(",");
+						if (!first) sb.Append(',');
 						sb.Append(stackVar.Name);
 						first = false;
 					}
-					sb.Append("}");
+					sb.Append('}');
 				}
 
 				if (this.VariablesBefore != null) {
 					sb.Append(" VarsBefore={");
 					bool first = true;
 					foreach (VariableSlot varSlot in this.VariablesBefore) {
-						if (!first) sb.Append(",");
+						if (!first) sb.Append(',');
 						if (varSlot.UnknownDefinition) {
-							sb.Append("?");
+							sb.Append('?');
 						} else {
 							bool first2 = true;
 							foreach (ByteCode storedBy in varSlot.Definitions) {
-								if (!first2) sb.Append("|");
+								if (!first2) sb.Append('|');
 								sb.AppendFormat("IL_{0:X2}", storedBy.Offset);
 								first2 = false;
 							}
 						}
 						first = false;
 					}
-					sb.Append("}");
+					sb.Append('}');
 				}
 
 				return sb.ToString();

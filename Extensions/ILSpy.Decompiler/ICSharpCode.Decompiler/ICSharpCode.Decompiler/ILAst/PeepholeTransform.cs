@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -219,7 +219,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return false;
 		}
-		
+
 		bool SimplifyLdcI4ConvI8(ILExpression expr)
 		{
 			ILExpression ldc;
@@ -236,7 +236,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return false;
 		}
-		
+
 		bool RemoveConvIFromArrayCreation(ILExpression expr)
 		{
 			ITypeDefOrRef typeRef;
@@ -255,7 +255,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			return false;
 		}
 		#endregion
-		
+
 		#region SimplifyLdObjAndStObj
 		bool SimplifyLdObjAndStObj(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
 		{
@@ -269,7 +269,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return modified;
 		}
-		
+
 		ILExpression SimplifyLdObjAndStObj(ILExpression expr, ref bool modified)
 		{
 			if (expr.Code == ILCode.Initobj) {
@@ -315,7 +315,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 		#endregion
-		
+
 		#region CachedDelegateInitialization
 		void CachedDelegateInitializationWithField(ILBlock block, ref int i)
 		{
@@ -324,7 +324,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// } else {
 			// }
 			// ...(..., ldsfld(field), ...)
-			
+
 			ILCondition c = block.Body[i] as ILCondition;
 			if (c == null || c.Condition == null && c.TrueBlock == null || c.FalseBlock == null)
 				return;
@@ -335,8 +335,8 @@ namespace ICSharpCode.Decompiler.ILAst {
 			ILExpression condition = c.Condition.Arguments.Single() as ILExpression;
 			if (condition == null || condition.Code != ILCode.Ldsfld)
 				return;
-			FieldDef field = condition.Operand is MemberRef ? 
-				((MemberRef)condition.Operand).ResolveFieldWithinSameModule() : 
+			FieldDef field = condition.Operand is MemberRef ?
+				((MemberRef)condition.Operand).ResolveFieldWithinSameModule() :
 				(FieldDef)condition.Operand; // field is defined in current assembly
 			if (field == null || !field.IsCompilerGeneratedOrIsInCompilerGeneratedClass())
 				return;
@@ -353,7 +353,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			MethodDef anonymousMethod = ((IMethod)newObj.Arguments[1].Operand).ResolveMethodWithinSameModule(); // method is defined in current assembly
 			if (!Ast.Transforms.DelegateConstruction.IsAnonymousMethod(context, anonymousMethod))
 				return;
-			
+
 			ILNode followingNode = block.Body.ElementAtOrDefault(i + 1);
 			if (followingNode != null && followingNode.GetSelfAndChildrenRecursive<ILExpression>(Optimize_List_ILExpression).Count(
 				e => e.Code == ILCode.Ldsfld && ((IField)e.Operand).ResolveFieldWithinSameModule() == field) == 1)
@@ -398,7 +398,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				}
 			}
 		}
-		
+
 		void CachedDelegateInitializationWithLocal(ILBlock block, ref int i)
 		{
 			// if (logicnot(ldloc(v))) {
@@ -406,7 +406,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// } else {
 			// }
 			// ...(..., ldloc(v), ...)
-			
+
 			ILCondition c = block.Body[i] as ILCondition;
 			if (c == null || c.Condition == null && c.TrueBlock == null || c.FalseBlock == null)
 				return;
@@ -431,7 +431,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			MethodDef anonymousMethod = ((IMethod)newObj.Arguments[1].Operand).ResolveMethodWithinSameModule(); // method is defined in current assembly
 			if (!Ast.Transforms.DelegateConstruction.IsAnonymousMethod(context, anonymousMethod))
 				return;
-			
+
 			ILNode followingNode = block.Body.ElementAtOrDefault(i + 1);
 			if (followingNode != null && followingNode.GetSelfAndChildrenRecursive<ILExpression>().Count(
 				e => e.Code == ILCode.Ldloc && (ILVariable)e.Operand == v) == 1)
@@ -439,7 +439,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				ILInlining inlining = GetILInlining(method);
 				if (!(inlining.numLdloc.GetOrDefault(v) == 2 && inlining.numStloc.GetOrDefault(v) == 2 && inlining.numLdloca.GetOrDefault(v) == 0))
 					return;
-				
+
 				// Find the store instruction that initializes the local to null:
 				foreach (ILBlock storeBlock in method.GetSelfAndChildrenRecursive<ILBlock>()) {
 					for (int j = 0; j < storeBlock.Body.Count; j++) {
@@ -489,7 +489,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 		#endregion
-		
+
 		#region MakeAssignmentExpression
 		bool MakeAssignmentExpression(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
 		{
@@ -526,13 +526,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 							store2.Arguments[store2.Arguments.Count - 1].AddSelfAndChildrenRecursiveILSpans(store2.ILSpans);
 						}
 						store2.Arguments[store2.Arguments.Count - 1] = initializer;
-						
+
 						inlining.InlineIfPossible(block, body, ref pos);
-						
+
 						return true;
 					}
 				}
-				
+
 				body.RemoveAt(pos + 1); // remove stloc
 				if (context.CalculateILSpans)
 					nextExpr.Arguments[0].AddSelfAndChildrenRecursiveILSpans(nextExpr.ILSpans);
@@ -559,7 +559,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return false;
 		}
-		
+
 		bool StoreCanBeConvertedToAssignment(ILExpression store, ILVariable exprVar)
 		{
 			if (store == null)
@@ -581,7 +581,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			return store.Arguments.Last().Code == ILCode.Ldloc && store.Arguments.Last().Operand == exprVar;
 		}
 		#endregion
-		
+
 		#region MakeCompoundAssignments
 		bool MakeCompoundAssignments(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
 		{
@@ -597,7 +597,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				GetILInlining(method).InlineInto(block, body, pos, aggressive: false);
 			return modified;
 		}
-		
+
 		bool MakeCompoundAssignment(ILExpression expr)
 		{
 			// stelem.any(T, ldloc(array), ldloc(pos), <OP>(ldelem.any(T, ldloc(array), ldloc(pos)), <RIGHT>))
@@ -623,7 +623,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				default:
 					return false;
 			}
-			
+
 			// all arguments except the last (so either array+pos, or ptr):
 			bool hasGeneratedVar = false;
 			for (int i = 0; i < expr.Arguments.Count - 1; i++) {
@@ -638,7 +638,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// (which uses a reversible transformation, see ReplaceMethodCallsWithOperator.RestoreOriginalAssignOperatorAnnotation)
 			if (!hasGeneratedVar)
 				return false;
-			
+
 			ILExpression op = expr.Arguments.Last();
 			// in case of compound assignments with a lifted operator the result is inside NullableOf and the operand is inside ValueOf
 			bool liftedOperator = false;
@@ -672,7 +672,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// result is "CompoundAssignment(<OP>(ldelem.any(...), <RIGHT>))"
 			return true;
 		}
-		
+
 		static bool CanBeRepresentedAsCompoundAssignment(ILExpression expr)
 		{
 			switch (expr.Code) {
@@ -719,7 +719,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 		#endregion
-		
+
 		#region IntroducePostIncrement
 
 		bool IntroducePostIncrement(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
@@ -738,7 +738,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 		bool IntroducePostIncrementForVariables(List<ILNode> body, ILExpression expr, int pos)
 		{
 			// Works for variables and static fields/properties
-			
+
 			// expr = ldloc(i)
 			// stloc(i, add(expr, ldc.i4(1)))
 			// ->
@@ -747,16 +747,16 @@ namespace ICSharpCode.Decompiler.ILAst {
 			ILExpression exprInit;
 			if (!(expr.Match(ILCode.Stloc, out exprVar, out exprInit) && exprVar.GeneratedByDecompiler))
 				return false;
-			
+
 			//The next expression
 			ILExpression nextExpr = body.ElementAtOrDefault(pos + 1) as ILExpression;
 			if (nextExpr == null)
 				return false;
-			
+
 			ILCode loadInstruction = exprInit.Code;
 			ILCode storeInstruction = nextExpr.Code;
 			bool recombineVariable = false;
-			
+
 			// We only recognise local variables, static fields, and static getters with no arguments
 			switch (loadInstruction) {
 				case ILCode.Ldloc:
@@ -790,20 +790,20 @@ namespace ICSharpCode.Decompiler.ILAst {
 				default:
 					return false;
 			}
-			
+
 			ILExpression addExpr = nextExpr.Arguments[0];
-			
+
 			int incrementAmount;
 			ILCode incrementCode = GetIncrementCode(addExpr, out incrementAmount);
 			if (!(incrementAmount != 0 && addExpr.Arguments[0].MatchLdloc(exprVar)))
 				return false;
-			
+
 			if (recombineVariable) {
 				// Split local variable, unsplit these two instances
 				// replace nextExpr.Operand with exprInit.Operand
 				ReplaceVariables(method, oldVar => oldVar == nextExpr.Operand ? (ILVariable)exprInit.Operand : oldVar);
 			}
-			
+
 			switch (loadInstruction) {
 				case ILCode.Ldloc:
 					exprInit.Code = ILCode.Ldloca;
@@ -821,7 +821,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			body.RemoveAt(pos + 1);
 			return true;
 		}
-		
+
 		static bool IsGetterSetterPair(object getterOperand, object setterOperand)
 		{
 			IMethod getter = getterOperand as IMethod;
@@ -840,32 +840,32 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return false;
 		}
-		
+
 		ILExpression IntroducePostIncrementForInstanceFields(ILExpression expr)
 		{
 			// stfld(field, ldloc(instance), add(stloc(helperVar, ldfld(field, ldloc(instance))), ldc.i4(1)))
 			// -> stloc(helperVar, postincrement(1, ldflda(field, ldloc(instance))))
-			
+
 			// Also works for array elements and pointers:
-			
+
 			// stelem.any(T, ldloc(instance), ldloc(pos), add(stloc(helperVar, ldelem.any(T, ldloc(instance), ldloc(pos))), ldc.i4(1)))
 			// -> stloc(helperVar, postincrement(1, ldelema(ldloc(instance), ldloc(pos))))
-			
+
 			// stobj(T, ldloc(ptr), add(stloc(helperVar, ldobj(T, ldloc(ptr)), ldc.i4(1))))
 			// -> stloc(helperVar, postIncrement(1, ldloc(ptr)))
-			
+
 			// callsetter(set_P, ldloc(instance), add(stloc(helperVar, callgetter(get_P, ldloc(instance))), ldc.i4(1)))
 			// -> stloc(helperVar, postIncrement(1, propertyaddress. callgetter(get_P, ldloc(instance))))
-			
+
 			if (!(expr.Code == ILCode.Stfld || expr.Code.IsStoreToArray() || expr.Code == ILCode.Stobj || expr.Code == ILCode.CallSetter || expr.Code == ILCode.CallvirtSetter))
 				return null;
-			
+
 			// Test that all arguments except the last are ldloc (1 arg for fields and pointers, 2 args for arrays)
 			for (int i = 0; i < expr.Arguments.Count - 1; i++) {
 				if (expr.Arguments[i].Code != ILCode.Ldloc)
 					return null;
 			}
-			
+
 			ILExpression addExpr = expr.Arguments[expr.Arguments.Count - 1];
 			int incrementAmount;
 			ILCode incrementCode = GetIncrementCode(addExpr, out incrementAmount);
@@ -873,7 +873,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			ILExpression initialValue;
 			if (!(incrementAmount != 0 && addExpr.Arguments[0].Match(ILCode.Stloc, out helperVar, out initialValue)))
 				return null;
-			
+
 			if (expr.Code == ILCode.Stfld) {
 				if (initialValue.Code != ILCode.Ldfld)
 					return null;
@@ -905,7 +905,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				if (!initialValue.Arguments[i].MatchLdloc((ILVariable)expr.Arguments[i].Operand))
 					return null;
 			}
-			
+
 			ILExpression stloc = addExpr.Arguments[0];
 			if (context.CalculateILSpans) {
 				stloc.Arguments[0].AddSelfAndChildrenRecursiveILSpans(stloc.ILSpans);
@@ -917,18 +917,18 @@ namespace ICSharpCode.Decompiler.ILAst {
 					addExpr.Arguments[i].AddSelfAndChildrenRecursiveILSpans(stloc.ILSpans);
 			}
 			if (expr.Code == ILCode.Stobj) {
-				stloc.Arguments[0] = new ILExpression(ILCode.PostIncrement, incrementAmount, initialValue.Arguments[0]);
+				stloc.Arguments[0] = new ILExpression(incrementCode, incrementAmount, initialValue.Arguments[0]);
 			} else if (expr.Code == ILCode.CallSetter || expr.Code == ILCode.CallvirtSetter) {
 				initialValue = new ILExpression(ILCode.AddressOf, null, initialValue);
-				stloc.Arguments[0] = new ILExpression(ILCode.PostIncrement, incrementAmount, initialValue);
+				stloc.Arguments[0] = new ILExpression(incrementCode, incrementAmount, initialValue);
 			} else {
-				stloc.Arguments[0] = new ILExpression(ILCode.PostIncrement, incrementAmount, initialValue);
+				stloc.Arguments[0] = new ILExpression(incrementCode, incrementAmount, initialValue);
 				initialValue.Code = (expr.Code == ILCode.Stfld ? ILCode.Ldflda : ILCode.Ldelema);
 			}
-			
+
 			return stloc;
 		}
-		
+
 		ILCode GetIncrementCode(ILExpression addExpr, out int incrementAmount)
 		{
 			ILCode incrementCode;
@@ -970,7 +970,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			return ILCode.Nop;
 		}
 		#endregion
-		
+
 		#region IntroduceFixedStatements
 		bool IntroduceFixedStatements(ILBlockBase block, List<ILNode> body, int i)
 		{
@@ -979,7 +979,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			int initEndPos;
 			if (!MatchFixedInitializer(body, i, out pinnedVar, out initValue, out initEndPos))
 				return false;
-			
+
 			ILFixedStatement fixedStmt = body.ElementAtOrDefault(initEndPos) as ILFixedStatement;
 			if (fixedStmt != null) {
 				ILExpression expr = fixedStmt.BodyBlock.Body.LastOrDefault() as ILExpression;
@@ -999,7 +999,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return true;
 				}
 			}
-			
+
 			// find where pinnedVar is reset to 0:
 			int j;
 			for (j = initEndPos; j < body.Count; j++) {
@@ -1024,17 +1024,17 @@ namespace ICSharpCode.Decompiler.ILAst {
 			body[i] = fixedStmt;
 			if (pinnedVar.Type is ByRefSig)
 				pinnedVar.Type = new PtrSig(((ByRefSig)pinnedVar.Type).Next);
-			
+
 			return true;
 		}
-		
+
 		bool IsNullOrZero(ILExpression expr)
 		{
 			if (expr.Code == ILCode.Conv_U || expr.Code == ILCode.Conv_I)
 				expr = expr.Arguments[0];
 			return (expr.Code == ILCode.Ldc_I4 && (int)expr.Operand == 0) || expr.Code == ILCode.Ldnull;
 		}
-		
+
 		bool MatchFixedInitializer(List<ILNode> body, int i, out ILVariable pinnedVar, out ILExpression initValue, out int nextPos)
 		{
 			if (body[i].Match(ILCode.Stloc, out pinnedVar, out initValue) && pinnedVar.IsPinned && !IsNullOrZero(initValue)) {
@@ -1087,7 +1087,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			nextPos = -1;
 			return false;
 		}
-		
+
 		bool MatchFixedArrayInitializerCondition(ILExpression condition, out ILExpression initValue)
 		{
 			ILExpression logicAnd;
@@ -1107,7 +1107,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			initValue = null;
 			return false;
 		}
-		
+
 		ILExpression UnpackDoubleNegation(ILExpression expr)
 		{
 			ILExpression negated;
@@ -1116,7 +1116,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			else
 				return expr;
 		}
-		
+
 		bool HandleStringFixing(ILVariable pinnedVar, List<ILNode> body, ref int pos, ref ILExpression fixedStmtInitializer)
 		{
 			// fixed (stloc(pinnedVar, ldloc(text))) {
@@ -1126,10 +1126,10 @@ namespace ICSharpCode.Decompiler.ILAst {
 			//   }
 			//   stloc(ptrVar, var2)
 			//   ...
-			
+
 			if (pos >= body.Count)
 				return false;
-			
+
 			ILVariable var1, var2;
 			ILExpression varAssignment, ptrInitialization;
 			if (!(body[pos].Match(ILCode.Stloc, out var1, out varAssignment) && varAssignment.Match(ILCode.Stloc, out var2, out ptrInitialization)))
@@ -1140,7 +1140,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				ptrInitialization = ptrInitialization.Arguments[0];
 			if (!ptrInitialization.MatchLdloc(pinnedVar))
 				return false;
-			
+
 			ILCondition ifStmt = body[pos + 1] as ILCondition;
 			if (!(ifStmt != null && ifStmt.TrueBlock != null && ifStmt.TrueBlock.Body.Count == 1 && (ifStmt.FalseBlock == null || ifStmt.FalseBlock.Body.Count == 0)))
 				return false;
@@ -1157,7 +1157,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return false;
 			if (!(calledMethod.Name == "get_OffsetToStringData" && calledMethod.DeclaringType != null && calledMethod.DeclaringType.FullName == "System.Runtime.CompilerServices.RuntimeHelpers"))
 				return false;
-			
+
 			ILVariable pointerVar;
 			if (body[pos + 2].Match(ILCode.Stloc, out pointerVar, out assignedExpr) && assignedExpr.MatchLdloc(var2)) {
 				pos += 3;
@@ -1167,7 +1167,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			return false;
 		}
 		#endregion
-		
+
 		#region SimplifyLogicNot
 		bool SimplifyLogicNot(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
 		{
@@ -1282,7 +1282,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			modified = true;
 		}
 		#endregion
-		
+
 		#region InlineExpressionTreeParameterDeclarations
 		bool InlineExpressionTreeParameterDeclarations(ILBlockBase block, List<ILNode> body, ILExpression expr, int pos)
 		{
@@ -1293,15 +1293,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 			// and the variables v are assigned only once (in that statements), and read only in a Expression::Lambda
 			// call that immediately follows the assignment statements, then we will inline those assignments
 			// into the Lambda call using ILCode.ExpressionTreeParameterDeclarations.
-			
+
 			// This is sufficient to allow inlining over the expression tree construction. The remaining translation
 			// of expression trees into C# will be performed by a C# AST transformer.
-			
+
 			for (int i = expr.Arguments.Count - 1; i >= 0; i--) {
 				if (InlineExpressionTreeParameterDeclarations(block, body, expr.Arguments[i], pos))
 					return true;
 			}
-			
+
 			IMethod mr;
 			ILExpression lambdaBodyExpr, parameterArray;
 			if (!(expr.Match(ILCode.Call, out mr, out lambdaBodyExpr, out parameterArray) && mr.Name == "Lambda"))
@@ -1311,7 +1311,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			int firstParameterPos = pos - parameterArray.Arguments.Count;
 			if (firstParameterPos < 0)
 				return false;
-			
+
 			ILExpression[] parameterInitExpressions = new ILExpression[parameterArray.Arguments.Count + 1];
 			for (int i = 0; i < parameterArray.Arguments.Count; i++) {
 				parameterInitExpressions[i] = body[firstParameterPos + i] as ILExpression;
@@ -1322,16 +1322,16 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return false;
 				// TODO: validate that the variable is only used here and within 'body'
 			}
-			
+
 			parameterInitExpressions[parameterInitExpressions.Length - 1] = lambdaBodyExpr;
 			Debug.Assert(expr.Arguments[0] == lambdaBodyExpr);
 			expr.Arguments[0] = new ILExpression(ILCode.ExpressionTreeParameterDeclarations, null, parameterInitExpressions);
-			
+
 			body.RemoveRange(firstParameterPos, parameterArray.Arguments.Count);
-			
+
 			return true;
 		}
-		
+
 		bool MatchParameterVariableAssignment(ILExpression expr)
 		{
 			if (expr == null)
