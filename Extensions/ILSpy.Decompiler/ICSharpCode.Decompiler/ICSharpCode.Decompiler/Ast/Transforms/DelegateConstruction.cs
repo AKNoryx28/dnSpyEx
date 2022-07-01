@@ -239,7 +239,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				var parameterReferencingIdentifiers =
 					from ident in body.Descendants.OfType<IdentifierExpression>()
 					let v = ident.Annotation<ILVariable>()
-					where v != null && v.IsParameter
+					where v != null && v.IsParameter && method.Parameters.Contains(v.OriginalParameter)
 					select ident;
 				if (!parameterReferencingIdentifiers.Any()) {
 					ame.AddAnnotation(ame.Parameters.GetAllRecursiveILSpans());
