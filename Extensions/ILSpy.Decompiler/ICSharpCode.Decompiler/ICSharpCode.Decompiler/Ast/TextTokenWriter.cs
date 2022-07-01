@@ -321,11 +321,11 @@ namespace ICSharpCode.Decompiler.Ast {
 		public override void WritePreProcessorDirective(PreProcessorDirectiveType type, string argument)
 		{
 			// pre-processor directive must start on its own line
-			output.Write("#", BoxedTextColor.Text);
-			output.Write(type.ToString().ToLowerInvariant(), BoxedTextColor.Text);
+			output.Write("#", BoxedTextColor.PreprocessorKeyword);
+			output.Write(type.ToString().ToLowerInvariant(), BoxedTextColor.PreprocessorKeyword);
 			if (!string.IsNullOrEmpty(argument)) {
 				output.Write(" ", BoxedTextColor.Text);
-				output.Write(argument, BoxedTextColor.Text);
+				output.Write(argument, BoxedTextColor.PreprocessorText);
 			}
 			output.WriteLine();
 		}

@@ -235,20 +235,16 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 			}
 			// Remove the parameter list from an AnonymousMethodExpression if the original method had no names,
 			// and the parameters are not used in the method body
-			if (!isLambda && method.Parameters.SkipNonNormal().All(p => string.IsNullOrEmpty(p.Name) || (p.Name.StartsWith("<") && p.Name.EndsWith(">")))) {
+			if (!isLambda && method.Parameters.SkipNonNormal().All(p => string.IsNullOrEmpty(p.Name) || (p.Name.StartsWith("<", StringComparison.Ordinal) && p.Name.EndsWith(">", StringComparison.Ordinal)))) {
 				var parameterReferencingIdentifiers =
 					from ident in body.Descendants.OfType<IdentifierExpression>()
 					let v = ident.Annotation<ILVariable>()
-					where v != null && v.IsParameter && method.Parameters.Contains(v.OriginalParameter)
+					where v != null && v.IsParameter
 					select ident;
 				if (!parameterReferencingIdentifiers.Any()) {
-					var parentMethod = objectCreateExpression.Parent.Annotation<IMethod>().ResolveMethodDef();
-					var type = parentMethod?.DeclaringType;
-					if (type != null && !HasTwoOrMoreMethods(type, parentMethod.Name)) {
-						ame.AddAnnotation(ame.Parameters.GetAllRecursiveILSpans());
-						ame.Parameters.Clear();
-						ame.HasParameterList = false;
-					}
+					ame.AddAnnotation(ame.Parameters.GetAllRecursiveILSpans());
+					ame.Parameters.Clear();
+					ame.HasParameterList = false;
 				}
 			}
 
