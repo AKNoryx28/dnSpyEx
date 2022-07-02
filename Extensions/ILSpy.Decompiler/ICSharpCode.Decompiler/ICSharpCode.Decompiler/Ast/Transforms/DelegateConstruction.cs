@@ -168,13 +168,31 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 
 		internal static bool IsAnonymousMethod(DecompilerContext context, MethodDef method)
 		{
-			if (method == null || !(method.HasGeneratedName() || method.Name.Contains("$")))
+			if (method is null)
 				return false;
 			if (method.IsLocalFunction())
 				return false;
-			if (!(method.IsCompilerGenerated() || IsPotentialClosure(context, method.DeclaringType)))
+			if (!(method.HasGeneratedName()
+				  || method.Name.Contains("$")
+				  || method.IsCompilerGeneratedOrIsInCompilerGeneratedClass()
+				  || IsPotentialClosure(context, method.DeclaringType)
+				  || ContainsAnonymousType(method)))
+			{
 				return false;
+			}
 			return true;
+		}
+
+		static bool ContainsAnonymousType(MethodDef method)
+		{
+			if (method.ReturnType.ContainsAnonymousType())
+				return true;
+			foreach (var p in method.Parameters)
+			{
+				if (p.Type.ContainsAnonymousType())
+					return true;
+			}
+			return false;
 		}
 
 		bool HandleAnonymousMethod(ObjectCreateExpression objectCreateExpression, Expression target, IMethod methodRef)

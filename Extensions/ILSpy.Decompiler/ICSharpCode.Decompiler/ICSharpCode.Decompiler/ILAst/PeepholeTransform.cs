@@ -351,7 +351,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			if (newObj.Arguments[1].Code != ILCode.Ldftn)
 				return;
 			MethodDef anonymousMethod = ((IMethod)newObj.Arguments[1].Operand).ResolveMethodWithinSameModule(); // method is defined in current assembly
-			if (!Ast.Transforms.DelegateConstruction.IsAnonymousMethod(context, anonymousMethod))
+			if (!Ast.Transforms.DelegateConstruction.IsAnonymousMethod(context, anonymousMethod) && !Ast.AstBuilder.IsAnonymousMethodCacheField(field))
 				return;
 
 			ILNode followingNode = block.Body.ElementAtOrDefault(i + 1);

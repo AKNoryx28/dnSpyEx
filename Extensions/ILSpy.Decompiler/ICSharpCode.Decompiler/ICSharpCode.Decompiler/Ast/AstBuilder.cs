@@ -286,9 +286,9 @@ namespace ICSharpCode.Decompiler.Ast {
 			return field.HasGeneratedName() && field.Name.EndsWith("BackingField", StringComparison.Ordinal);
 		}
 
-		static bool IsAnonymousMethodCacheField(FieldDef field)
+		internal static bool IsAnonymousMethodCacheField(FieldDef field)
 		{
-			return field.Name.StartsWith("CS$<>", StringComparison.Ordinal) || field.Name.StartsWith("<>f__am", StringComparison.Ordinal);
+			return field.Name.StartsWith("CS$<>", StringComparison.Ordinal) || field.Name.StartsWith("<>f__am", StringComparison.Ordinal) || field.Name.StartsWith("<>f__mg", StringComparison.Ordinal);
 		}
 
 		static bool IsClosureType(TypeDef type)
