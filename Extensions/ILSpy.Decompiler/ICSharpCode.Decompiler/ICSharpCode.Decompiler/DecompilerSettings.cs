@@ -557,6 +557,17 @@ namespace ICSharpCode.Decompiler {
 		}
 		bool hexadecimalNumbers = false;
 
+		public bool EmitCalliAsInvocationExpression {
+			get { return emitCalliAsInvocationExpression; }
+			set {
+				if (emitCalliAsInvocationExpression != value) {
+					emitCalliAsInvocationExpression = value;
+					OnPropertyChanged(nameof(EmitCalliAsInvocationExpression));
+				}
+			}
+		}
+		bool emitCalliAsInvocationExpression = false;
+
 		CSharpFormattingOptions csharpFormattingOptions;
 
 		public CSharpFormattingOptions CSharpFormattingOptions {
@@ -640,6 +651,7 @@ namespace ICSharpCode.Decompiler {
 			if (MemberAddPrivateModifier != other.MemberAddPrivateModifier) return false;
 			if (RemoveNewDelegateClass != other.RemoveNewDelegateClass) return false;
 			if (HexadecimalNumbers != other.HexadecimalNumbers) return false;
+			if (EmitCalliAsInvocationExpression != other.EmitCalliAsInvocationExpression) return false;
 			if (!CSharpFormattingOptions.Equals(other.CSharpFormattingOptions)) return false;
 
 			return true;
@@ -686,6 +698,7 @@ namespace ICSharpCode.Decompiler {
 				h ^= MemberAddPrivateModifier		? 0 : 0x00000002U;
 				h ^= RemoveNewDelegateClass			? 0 : 0x00000001U;
 				h ^= HexadecimalNumbers				? 0 : 0x00000002U;
+				h ^= EmitCalliAsInvocationExpression ? 0 : 0x00000004U;
 
 				for (int i = 0; i < decompilationObjects.Length; i++)
 					h ^= (uint)decompilationObjects[i] << (i * 8);
@@ -740,6 +753,7 @@ namespace ICSharpCode.Decompiler {
 			other.MemberAddPrivateModifier = this.MemberAddPrivateModifier;
 			other.RemoveNewDelegateClass = this.RemoveNewDelegateClass;
 			other.HexadecimalNumbers = this.HexadecimalNumbers;
+			other.EmitCalliAsInvocationExpression = this.EmitCalliAsInvocationExpression;
 			if (!this.CSharpFormattingOptions.Equals(other.CSharpFormattingOptions)) {
 				this.CSharpFormattingOptions.CopyTo(other.CSharpFormattingOptions);
 				other.OnPropertyChanged(nameof(other.CSharpFormattingOptions));

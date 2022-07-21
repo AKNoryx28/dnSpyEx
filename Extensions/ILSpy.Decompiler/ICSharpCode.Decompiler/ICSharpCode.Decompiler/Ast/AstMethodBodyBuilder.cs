@@ -352,7 +352,7 @@ namespace ICSharpCode.Decompiler.Ast {
 							}.WithAnnotation(catchClause.ExceptionVariable).WithAnnotation(!context.CalculateILSpans ? null : catchClause.StlocILSpans));
 					}
 				}
-				
+
 				if (tryCatchNode.FinallyBlock != null) {
 					tryCatchStmt.FinallyBlock = TransformBlock(tryCatchNode.FinallyBlock);
 					if (tryCatchNode.InlinedFinallyMethod is not null) {
@@ -362,8 +362,7 @@ namespace ICSharpCode.Decompiler.Ast {
 						tryCatchStmt.FinallyBlock.AddAnnotation(finallyBlockDebugInfoBuilder);
 					}
 				}
-				
-					tryCatchStmt.FinallyBlock = TransformBlock(tryCatchNode.FinallyBlock);
+
 				if (tryCatchNode.FaultBlock != null) {
 					CatchClause cc = new CatchClause();
 					cc.Body = TransformBlock(tryCatchNode.FaultBlock);
@@ -843,7 +842,7 @@ namespace ICSharpCode.Decompiler.Ast {
 						return IdentifierExpression.Create("ldvirtftn", BoxedTextColor.OpCode).Invoke(expr)
 							.WithAnnotation(Transforms.DelegateConstruction.Annotation.True);
 					}
-					case ILCode.Calli:       return InlineAssembly(byteCode, args);
+					case ILCode.Calli:		 return context.Settings.EmitCalliAsInvocationExpression ? TransformCalli(byteCode, args) : InlineAssembly(byteCode, args);
 					case ILCode.Ckfinite:    return InlineAssembly(byteCode, args);
 					case ILCode.Constrained: return InlineAssembly(byteCode, args);
 					case ILCode.Cpblk:       return InlineAssembly(byteCode, args);
@@ -1350,7 +1349,23 @@ namespace ICSharpCode.Decompiler.Ast {
 		}
 		static readonly UTF8String nameInvoke = new UTF8String("Invoke");
 
-		static MethodSemanticsAttributes GetMethodSemanticsAttributes(IMethod method) {
+		AstNode TransformCalli(ILExpression byteCode, List<Expression> args) {
+			var methodSig = (MethodSig)byteCode.Operand;
+			var methodArgs = new List<Expression>(args);
+
+			var target = methodArgs.Last();
+			methodArgs.RemoveAt(methodArgs.Count - 1);
+
+			// Unpack any DirectionExpression that is used as target for the call
+			// (calling methods on value types implicitly passes the first argument by reference)
+			target = UnpackDirectionExpression(target);
+
+			target.AddChild(new Comment($"calli[{methodSig.CallingConvention.ToString().ToLower()}]", CommentType.MultiLine), Roles.Comment);
+
+			return target.Invoke(methodArgs).CastTo(AstBuilder.ConvertType(methodSig.RetType, stringBuilder));
+		}
+
+		static MethodSemanticsAttributes GetMethodSemanticsAttributes(dnlib.DotNet.IMethod method) {
 			if (method == null)
 				return MethodSemanticsAttributes.None;
 			string name = method.Name;

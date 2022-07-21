@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -70,15 +70,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 		sealed class ExpressionToInfer
 		{
 			public ILExpression Expression;
-			
+
 			public bool Done;
-			
+
 			/// <summary>
 			/// Set for assignment expressions that should wait until the variable type is available
 			/// from the context where the variable is used.
 			/// </summary>
 			public ILVariable DependsOnSingleLoad;
-			
+
 			/// <summary>
 			/// The list variables that are read by this expression.
 			/// </summary>
@@ -104,7 +104,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 
 		}
-		
+
 		DecompilerContext context;
 		ICorLibTypes typeSystem;
 		ILBlock method;
@@ -160,7 +160,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					list.Reverse(index, list.Count - index);
 			}
 		}
-		
+
 		void FindNestedAssignments(ILExpression expr, ExpressionToInfer parent)
 		{
 			foreach (ILExpression arg in expr.Arguments) {
@@ -184,7 +184,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 		#endregion
-		
+
 		void IdentifySingleLoadVariables()
 		{
 			// Find all variables that are assigned to exactly a single time:
@@ -203,7 +203,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				}
 			}
 		}
-		
+
 		void RunInference()
 		{
 			int numberOfExpressionsAlreadyInferred = 0;
@@ -270,7 +270,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				}
 			}
 		}
-		
+
 		void RunInference(ILExpression expr)
 		{
 			bool anyArgumentIsMissingExpectedType = expr.Arguments.Any(a => a.ExpectedType == null);
@@ -282,7 +282,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				}
 			}
 		}
-		
+
 		/// <summary>
 		/// Infers the C# type of <paramref name="expr"/>.
 		/// </summary>
@@ -302,7 +302,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				expr.InferredType = DoInferTypeForExpression(expr, expectedType, forceInferChildren);
 			return expr.InferredType;
 		}
-		
+
 		TypeSig DoInferTypeForExpression(ILExpression expr, TypeSig expectedType, bool forceInferChildren = false)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -359,7 +359,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 							return null;
 					}
 					#endregion
-					#region Call / NewObj
+					#region Call / NewObj / Calli
 				case ILCode.Call:
 				case ILCode.Callvirt:
 				case ILCode.CallGetter:
@@ -388,6 +388,24 @@ namespace ICSharpCode.Decompiler.ILAst {
 						} else {
 							return SubstituteTypeArgs(method.MethodSig.GetRetType(), method: method);
 						}
+					}
+				case ILCode.Calli:
+					{
+						var methodSig = expr.Operand as MethodSig;
+						var parameters = methodSig?.GetParameters();
+						if (forceInferChildren && parameters != null) {
+							for (int i = 0; i < expr.Arguments.Count; i++) {
+								if (i == 0 && methodSig.HasThis) {
+									// no-op, hidden this calli is a mistery to me
+								} else {
+									int pi = methodSig.HasThis ? i - 1 : i;
+									if (pi < parameters.Count)
+										InferTypeForExpression(expr.Arguments[i], parameters[pi]);
+								}
+							}
+						}
+
+						return methodSig?.GetRetType();
 					}
 				case ILCode.Newobj:
 					{
@@ -907,7 +925,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return null;
 			}
 		}
-		
+
 		/// <summary>
 		/// Wraps 'type' in a ByReferenceType if it is a value type. If a constrained prefix is specified,
 		/// returns the constrained type wrapped in a ByReferenceType.
@@ -921,7 +939,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			else
 				return type;
 		}
-		
+
 		/// <summary>
 		/// Promotes primitive types smaller than int32 to int32.
 		/// </summary>
@@ -942,7 +960,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return type;
 			}
 		}
-		
+
 		TypeSig HandleConversion(int targetBitSize, bool targetSigned, ILExpression arg, TypeSig expectedType, TypeSig targetType)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -963,12 +981,12 @@ namespace ICSharpCode.Decompiler.ILAst {
 			arg.ExpectedType = resultType; // store the expected type in the argument so that AstMethodBodyBuilder will insert a cast
 			return resultType;
 		}
-		
+
 		public static TypeSig GetFieldType(IField field)
 		{
 			return SubstituteTypeArgs(field?.FieldSig?.Type.RemoveModifiers(), field?.DeclaringType.ToTypeSig());
 		}
-		
+
 		public static TypeSig SubstituteTypeArgs(TypeSig type, TypeSig typeContext = null, IMethod method = null)
 		{
 			IList<TypeSig> typeArgs = null, methodArgs = null;
@@ -985,7 +1003,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 
 			return GenericArgumentResolver.Resolve(type, typeArgs, methodArgs);
 		}
-		
+
 		static TypeSig UnpackPointer(TypeSig pointerOrManagedReference)
 		{
 			if (pointerOrManagedReference is ByRefSig || pointerOrManagedReference is PtrSig)
@@ -1006,13 +1024,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 			t.GenericArguments.Add(type);
 			return t;
 		}
-		
+
 		TypeSig InferArgumentsInBinaryOperator(ILExpression expr, bool? isSigned, TypeSig expectedType)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
 			return InferBinaryArguments(expr.Arguments[0], expr.Arguments[1], expectedType);
 		}
-		
+
 		TypeSig InferArgumentsInAddition(ILExpression expr, bool? isSigned, TypeSig expectedType)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -1044,7 +1062,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return InferBinaryArguments(left, right, expectedType, leftPreferred: leftPreferred, rightPreferred: rightPreferred);
 		}
-		
+
 		TypeSig InferArgumentsInSubtraction(ILExpression expr, bool? isSigned, TypeSig expectedType)
 		{
 			RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -1095,7 +1113,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return left.ExpectedType;
 			}
 		}
-		
+
 		TypeSig TypeWithMoreInformation(TypeSig leftPreferred, TypeSig rightPreferred)
 		{
 			int left = GetInformationAmount(leftPreferred);
@@ -1109,12 +1127,12 @@ namespace ICSharpCode.Decompiler.ILAst {
 				return leftPreferred;
 			}
 		}
-		
+
 		/// <summary>
 		/// Information amount used for IntPtr.
 		/// </summary>
 		public const int NativeInt = 33; // treat native int as between int32 and int64
-		
+
 		/// <summary>
 		/// Gets the underlying type, if the specified type is an enum.
 		/// Otherwise, returns null.
@@ -1131,7 +1149,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 			return null;
 		}
-		
+
 		public static int GetInformationAmount(TypeSig type)
 		{
 			type = GetEnumUnderlyingType(type) ?? type;
@@ -1164,7 +1182,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return 100; // we consider structs/objects to have more information than any primitives
 			}
 		}
-		
+
 		public static bool IsIntegerOrEnum(TypeSig type)
 		{
 			return IsSigned(type) != null;
@@ -1180,7 +1198,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			TypeDef typeDef = typeSig.Resolve();
 			return typeDef != null && typeDef.IsEnum;
 		}
-		
+
 		static bool? IsSigned(TypeSig type)
 		{
 			type = GetEnumUnderlyingType(type) ?? type;
@@ -1204,7 +1222,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return null;
 			}
 		}
-		
+
 		static bool OperandFitsInType(TypeSig type, int num)
 		{
 			type = GetEnumUnderlyingType(type) ?? type;
@@ -1223,7 +1241,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return true;
 			}
 		}
-		
+
 		static bool IsArrayPointerOrReference(TypeSig type)
 		{
 			while (type != null) {
@@ -1242,7 +1260,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 			else
 				return type is GenericInstSig && IsNullableType(((GenericInstSig)type).GenericType);
 		}
-		
+
 		public static TypeCode GetTypeCode(TypeSig type)
 		{
 			if (type == null)
@@ -1278,7 +1296,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					return TypeCode.Object;
 			}
 		}
-		
+
 		/// <summary>
 		/// Clears the type inference data on the method.
 		/// </summary>
@@ -1292,7 +1310,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					v.Type = v.OriginalParameter?.Type ?? v.OriginalVariable?.Type;
 			}
 		}
-		
+
 		public static bool IsSameType(IType type1, IType type2)
 		{
 			if (type1 == type2)
