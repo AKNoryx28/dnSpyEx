@@ -352,7 +352,17 @@ namespace ICSharpCode.Decompiler.Ast {
 							}.WithAnnotation(catchClause.ExceptionVariable).WithAnnotation(!context.CalculateILSpans ? null : catchClause.StlocILSpans));
 					}
 				}
-				if (tryCatchNode.FinallyBlock != null)
+				
+				if (tryCatchNode.FinallyBlock != null) {
+					tryCatchStmt.FinallyBlock = TransformBlock(tryCatchNode.FinallyBlock);
+					if (tryCatchNode.InlinedFinallyMethod is not null) {
+						var finallyBlockDebugInfoBuilder = new MethodDebugInfoBuilder(context.SettingsVersion,
+							StateMachineKind.None, tryCatchNode.InlinedFinallyMethod, null,
+							CreateSourceLocals(GetVariables(tryCatchNode.FinallyBlock).ToHashSet()), null, null);
+						tryCatchStmt.FinallyBlock.AddAnnotation(finallyBlockDebugInfoBuilder);
+					}
+				}
+				
 					tryCatchStmt.FinallyBlock = TransformBlock(tryCatchNode.FinallyBlock);
 				if (tryCatchNode.FaultBlock != null) {
 					CatchClause cc = new CatchClause();

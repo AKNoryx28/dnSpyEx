@@ -570,6 +570,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 							newBody.RemoveRange(stateChange.NewBodyPos, newBody.Count - stateChange.NewBodyPos); // remove all nodes that we just moved into the try block
 							tryFinally.CatchBlocks = new List<ILTryCatchBlock.CatchBlock>();
 							tryFinally.FinallyBlock = finallyBlock;
+							tryFinally.InlinedFinallyMethod = method;
 							newBody.Add(tryFinally);
 							newBody.Add(label);
 						}
