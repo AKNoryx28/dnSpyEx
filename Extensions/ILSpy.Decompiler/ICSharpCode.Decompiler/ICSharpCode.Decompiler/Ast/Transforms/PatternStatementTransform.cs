@@ -1316,9 +1316,9 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					property.Getter.Body = null;
 					property.Setter.Body = null;
 					if (prop.GetMethod.Body != null)
-						property.Getter.AddAnnotation(new List<ILSpan> { new ILSpan(0, (uint)prop.GetMethod.Body.GetCodeSize()) });
+						property.Getter.AddAnnotation(new List<ILSpan>(1) { new ILSpan(0, (uint)prop.GetMethod.Body.GetCodeSize()) });
 					if (prop.SetMethod?.Body != null)
-						property.Setter.AddAnnotation(new List<ILSpan> { new ILSpan(0, (uint)prop.SetMethod.Body.GetCodeSize()) });
+						property.Setter.AddAnnotation(new List<ILSpan>(1) { new ILSpan(0, (uint)prop.SetMethod.Body.GetCodeSize()) });
 				}
 			}
 			// Since the event instance is not changed, we can continue in the visitor as usual, so return null

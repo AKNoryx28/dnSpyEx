@@ -714,7 +714,7 @@ namespace ICSharpCode.Decompiler.Ast {
 					};
 				}
 				AstType baseType = ConvertType(gType.GenericType == null ? null : gType.GenericType.TypeDefOrRef, typeAttributes, ref typeIndex, options & ~ConvertTypeOptions.IncludeTypeParameterDefinitions, depth, sb);
-				List<AstType> typeArguments = new List<AstType>();
+				List<AstType> typeArguments = new List<AstType>(gType.GenericArguments.Count);
 				foreach (var typeArgument in gType.GenericArguments) {
 					typeIndex++;
 					typeArguments.Add(ConvertType(typeArgument, typeAttributes, ref typeIndex, options, depth, sb));
@@ -836,7 +836,7 @@ namespace ICSharpCode.Decompiler.Ast {
 		{
 			TypeDef typeDef = type.ResolveTypeDef();
 			if (typeDef != null && typeDef.HasGenericParameters) {
-				List<AstType> typeArguments = new List<AstType>();
+				List<AstType> typeArguments = new List<AstType>(typeDef.GenericParameters.Count);
 				foreach (GenericParam gp in typeDef.GenericParameters) {
 					typeArguments.Add(new SimpleType(gp.Name).WithAnnotation(gp));
 				}
@@ -1558,7 +1558,7 @@ namespace ICSharpCode.Decompiler.Ast {
 					var baseCtor = GetBaseConstructorForEmptyBody(method);
 					if (baseCtor != null) {
 						var methodSig = GetMethodBaseSig(method.DeclaringType.BaseType, baseCtor.MethodSig);
-						var args = new List<Expression>();
+						var args = new List<Expression>(methodSig.Params.Count);
 						foreach (var argType in methodSig.Params) {
 							var defVal = new DefaultValueExpression(ConvertType(argType.RemovePinnedAndModifiers(), stringBuilder));
 							args.Add(defVal);
@@ -1626,7 +1626,7 @@ namespace ICSharpCode.Decompiler.Ast {
 			bs = new BlockStatement();
 			var emptyStmt = new EmptyStatement();
 			if (method.Body != null)
-				emptyStmt.AddAnnotation(new List<ILSpan> { new ILSpan(0, (uint)method.Body.GetCodeSize()) });
+				emptyStmt.AddAnnotation(new List<ILSpan>(1) { new ILSpan(0, (uint)method.Body.GetCodeSize()) });
 			bs.Statements.Add(emptyStmt);
 			bs.InsertChildAfter(null, new Comment(msg, CommentType.MultiLine), Roles.Comment);
 			builder = new MethodDebugInfoBuilder(context.SettingsVersion, StateMachineKind.None, method, null, method.Body.Variables.Select(a => new SourceLocal(a, CreateLocalName(a), a.Type, SourceVariableFlags.None)).ToArray(), null, null);

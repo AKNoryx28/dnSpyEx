@@ -483,7 +483,7 @@ namespace ICSharpCode.Decompiler.Ast {
 			object operand = byteCode.Operand;
 			AstType operandAsTypeRef = AstBuilder.ConvertType(operand as ITypeDefOrRef, stringBuilder);
 
-			List<Ast.Expression> args = new List<Expression>();
+			List<Ast.Expression> args = new List<Expression>(byteCode.Arguments.Count);
 			foreach(ILExpression arg in byteCode.Arguments) {
 				args.Add((Ast.Expression)TransformExpression(arg));
 			}

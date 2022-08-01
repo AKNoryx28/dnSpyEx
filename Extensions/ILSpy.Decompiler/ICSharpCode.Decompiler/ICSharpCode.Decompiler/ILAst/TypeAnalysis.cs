@@ -650,6 +650,8 @@ namespace ICSharpCode.Decompiler.ILAst {
 						}
 						return varType;
 					}
+				case ILCode.Ckfinite:
+					return InferTypeForExpression(expr.Arguments[0], null);
 					#endregion
 					#region Constant loading instructions
 				case ILCode.Ldnull:
@@ -873,12 +875,18 @@ namespace ICSharpCode.Decompiler.ILAst {
 				case ILCode.Br:
 				case ILCode.Leave:
 				case ILCode.Endfinally:
-				case ILCode.Switch:
-				case ILCode.Throw:
 				case ILCode.Rethrow:
 				case ILCode.LoopOrSwitchBreak:
 				case ILCode.LoopContinue:
 				case ILCode.YieldBreak:
+					return null;
+				case ILCode.Throw:
+					if (forceInferChildren && expr.Arguments.Count == 1)
+						InferTypeForExpression(expr.Arguments[0], typeSystem.Object);
+					return null;
+				case ILCode.Switch:
+					if (forceInferChildren && expr.Arguments.Count == 1)
+						InferTypeForExpression(expr.Arguments[0], typeSystem.Int32);
 					return null;
 				case ILCode.Ret:
 					if (forceInferChildren && expr.Arguments.Count == 1) {

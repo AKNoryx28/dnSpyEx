@@ -312,15 +312,15 @@ namespace ICSharpCode.Decompiler.ILAst {
 								ILSwitch.CaseBlock caseBlock = ilSwitch.CaseBlocks.FirstOrDefault(b => b.EntryGoto.Operand == condLabel);
 								if (caseBlock == null) {
 									caseBlock = new ILSwitch.CaseBlock() {
-										Values = new List<int>(),
 										EntryGoto = new ILExpression(ILCode.Br, condLabel)
 									};
 									ilSwitch.CaseBlocks.Add(caseBlock);
 									if (!includedDefault && condLabel == fallLabel) {
 										includedDefault = true;
 										block.Body.RemoveTail(ILCode.Br);
-										caseBlock.Values = null;
 									}
+									else
+										caseBlock.Values = new List<int>(caseLabels.Length);
 
 									ControlFlowNode condTarget = null;
 									labelToCfNode.TryGetValue(condLabel, out condTarget);
@@ -330,7 +330,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 										caseBlock.Body.AddRange(FindConditions(content, condTarget));
 										// Add explicit break which should not be used by default, but the goto removal might decide to use it
 										caseBlock.Body.Add(new ILBasicBlock() {
-											Body = {
+											Body = new List<ILNode>(2) {
 												new ILLabel() { Name = "SwitchBreak_" + (nextLabelIndex++).ToString() },
 												new ILExpression(ILCode.LoopOrSwitchBreak, null)
 											}
@@ -354,7 +354,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 									caseBlock.Body.AddRange(FindConditions(content, fallTarget));
 									// Add explicit break which should not be used by default, but the goto removal might decide to use it
 									caseBlock.Body.Add(new ILBasicBlock() {
-										Body = {
+										Body = new List<ILNode>(2) {
 											new ILLabel() { Name = "SwitchBreak_" + (nextLabelIndex++).ToString() },
 											new ILExpression(ILCode.LoopOrSwitchBreak, null)
 										}
