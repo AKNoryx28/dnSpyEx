@@ -869,6 +869,8 @@ namespace ICSharpCode.Decompiler.ILAst {
 				// Cut all handlers
 				tryCatchBlock.CatchBlocks = new List<ILTryCatchBlock.CatchBlock>();
 				foreach(ExceptionHandler eh in handlers) {
+					if (eh.HandlerStart is null)
+						throw new ArgumentNullException(nameof(eh.HandlerStart));
 					uint handlerEndOffset = eh.HandlerEnd?.Offset ?? codeSize;
 					int startIdx = 0;
 					while (startIdx < body.Count && body[startIdx].Offset < eh.HandlerStart.GetOffset()) startIdx++;
