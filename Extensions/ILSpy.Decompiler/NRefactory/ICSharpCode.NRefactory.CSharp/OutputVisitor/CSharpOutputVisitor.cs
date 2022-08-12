@@ -581,7 +581,8 @@ namespace ICSharpCode.NRefactory.CSharp {
 						writer.Unindent();
 					start = writer.GetLocation();
 					braceHelper.RightBrace();
-					SaveDeclarationOffset();
+					if (saveDeclOffset)
+						SaveDeclarationOffset();
 					end = writer.GetLocation();
 					isAtStartOfLine = false;
 					break;
@@ -589,7 +590,8 @@ namespace ICSharpCode.NRefactory.CSharp {
 				case BraceStyle.NextLineShifted:
 					start = writer.GetLocation();
 					braceHelper.RightBrace();
-					SaveDeclarationOffset();
+					if (saveDeclOffset)
+						SaveDeclarationOffset();
 					end = writer.GetLocation();
 					isAtStartOfLine = false;
 					if (unindent)
@@ -600,7 +602,8 @@ namespace ICSharpCode.NRefactory.CSharp {
 						writer.Unindent();
 					start = writer.GetLocation();
 					braceHelper.RightBrace();
-					SaveDeclarationOffset();
+					if (saveDeclOffset)
+						SaveDeclarationOffset();
 					end = writer.GetLocation();
 					isAtStartOfLine = false;
 					if (unindent)
@@ -1885,6 +1888,8 @@ namespace ICSharpCode.NRefactory.CSharp {
 				flags = CodeBracesRangeFlags.UsingBraces;
 			} else if (blockStatement.Parent is FixedStatement) {
 				flags = CodeBracesRangeFlags.FixedBraces;
+			} else if (blockStatement.Parent is SwitchSection) {
+				flags = CodeBracesRangeFlags.CaseBraces;
 			} else {
 				flags = CodeBracesRangeFlags.OtherBlockBraces;
 			}
@@ -2212,7 +2217,8 @@ namespace ICSharpCode.NRefactory.CSharp {
 			Space(policy.SpacesWithinSwitchParentheses);
 			braceHelper.RightParen();
 			DebugEnd(switchStatement);
-			braceHelper = OpenBrace(policy.StatementBraceStyle, CodeBracesRangeFlags.BraceKind_CurlyBraces);
+			// We don't use CodeBracesRangeFlags.SwitchBraces if we are not indenting the switch body as the indent guide would interfere with the case labels.
+			braceHelper = OpenBrace(policy.StatementBraceStyle, policy.IndentSwitchBody ? CodeBracesRangeFlags.SwitchBraces : CodeBracesRangeFlags.BraceKind_CurlyBraces);
 			if (!policy.IndentSwitchBody) {
 				writer.Unindent();
 			}
