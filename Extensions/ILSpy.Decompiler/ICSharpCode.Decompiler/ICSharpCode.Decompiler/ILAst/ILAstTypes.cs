@@ -21,6 +21,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using dnlib.DotNet;
 using dnlib.DotNet.Emit;
@@ -409,7 +410,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 				if (ExceptionType != null) {
 					output.Write("catch", BoxedTextColor.Keyword);
 					output.Write(" ", BoxedTextColor.Text);
-					ExceptionType.WriteTo(output, ILNameSyntax.TypeName);
+					ExceptionType.WriteTo(output, new StringBuilder(), ILNameSyntax.TypeName);
 					if (ExceptionVariable != null) {
 						output.Write(" ", BoxedTextColor.Text);
 						output.Write(ExceptionVariable.Name, ExceptionVariable.GetTextReferenceObject(), DecompilerReferenceFlags.Local | DecompilerReferenceFlags.Definition, BoxedTextColor.Local);
@@ -450,7 +451,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 		public List<CatchBlock> CatchBlocks;
 		public ILBlock          FinallyBlock;
 		public ILBlock          FaultBlock;
-		
+
 		// Used for inlined finally blocks in yield return state machines
 		public MethodDef InlinedFinallyMethod;
 
@@ -706,18 +707,19 @@ namespace ICSharpCode.Decompiler.ILAst {
 			}
 		}
 
-		void WriteExpectedType(IDecompilerOutput output) {
+		void WriteExpectedType(IDecompilerOutput output, StringBuilder sb) {
 			var parenStart = output.NextPosition;
 			output.Write("[", BoxedTextColor.Punctuation);
 			output.Write("exp", BoxedTextColor.Keyword);
 			output.Write(":", BoxedTextColor.Punctuation);
-			ExpectedType.WriteTo(output, ILNameSyntax.ShortTypeName);
+			ExpectedType.WriteTo(output, sb, ILNameSyntax.ShortTypeName);
 			output.Write("]", BoxedTextColor.Punctuation);
 			output.AddBracePair(new TextSpan(parenStart, 1), new TextSpan(output.Length - 1, 1), CodeBracesRangeFlags.SquareBrackets);
 		}
 
 		public override void WriteTo(IDecompilerOutput output, MethodDebugInfoBuilder builder)
 		{
+			var sb = new StringBuilder();
 			var startLoc = output.NextPosition;
 			if (Operand is ILVariable && ((ILVariable)Operand).GeneratedByDecompiler) {
 				var v = (ILVariable)Operand;
@@ -734,9 +736,9 @@ namespace ICSharpCode.Decompiler.ILAst {
 					output.Write(((ILVariable)Operand).Name, op, DecompilerReferenceFlags.Local, ((ILVariable)Operand).IsParameter ? BoxedTextColor.Parameter : BoxedTextColor.Local);
 					if (this.InferredType != null) {
 						output.Write(":", BoxedTextColor.Punctuation);
-						this.InferredType.WriteTo(output, ILNameSyntax.ShortTypeName);
+						this.InferredType.WriteTo(output, sb, ILNameSyntax.ShortTypeName);
 						if (this.ExpectedType != null && this.ExpectedType.FullName != this.InferredType.FullName)
-							WriteExpectedType(output);
+							WriteExpectedType(output, sb);
 					}
 					UpdateDebugInfo(builder, startLoc, output.NextPosition, this.GetSelfAndChildrenRecursiveILSpans());
 					return;
@@ -755,11 +757,11 @@ namespace ICSharpCode.Decompiler.ILAst {
 			output.Write(codeName, codeName, DecompilerReferenceFlags.Local, BoxedTextColor.OpCode);
 			if (this.InferredType != null) {
 				output.Write(":", BoxedTextColor.Punctuation);
-				this.InferredType.WriteTo(output, ILNameSyntax.ShortTypeName);
+				this.InferredType.WriteTo(output, sb, ILNameSyntax.ShortTypeName);
 				if (this.ExpectedType != null && this.ExpectedType.FullName != this.InferredType.FullName)
-					WriteExpectedType(output);
+					WriteExpectedType(output, sb);
 			} else if (this.ExpectedType != null)
-				WriteExpectedType(output);
+				WriteExpectedType(output, sb);
 			var parenStart = output.NextPosition;
 			output.Write("(", BoxedTextColor.Punctuation);
 			bool first = true;
@@ -779,13 +781,13 @@ namespace ICSharpCode.Decompiler.ILAst {
 				} else if ((Operand as IMethod)?.MethodSig != null) {
 					IMethod method = (IMethod)Operand;
 					if (method.DeclaringType != null) {
-						method.DeclaringType.WriteTo(output, ILNameSyntax.ShortTypeName);
+						method.DeclaringType.WriteTo(output, sb, ILNameSyntax.ShortTypeName);
 						output.Write("::", BoxedTextColor.Operator);
 					}
 					output.Write(method.Name, method, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(method));
 				} else if (Operand is IField) {
 					IField field = (IField)Operand;
-					field.DeclaringType.WriteTo(output, ILNameSyntax.ShortTypeName);
+					field.DeclaringType.WriteTo(output, sb, ILNameSyntax.ShortTypeName);
 					output.Write("::", BoxedTextColor.Operator);
 					output.Write(field.Name, field, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(field));
 				} else if (Operand is ILVariable) {
@@ -793,7 +795,7 @@ namespace ICSharpCode.Decompiler.ILAst {
 					var op = v.GetTextReferenceObject();
 					output.Write(v.Name, op, DecompilerReferenceFlags.Local, v.IsParameter ? BoxedTextColor.Parameter : BoxedTextColor.Local);
 				} else {
-					DisassemblerHelpers.WriteOperand(output, Operand, DecompilerSettings.ConstMaxStringLength, NumberFormatter.GetCSharpInstance(hex: false, upper: true));
+					DisassemblerHelpers.WriteOperand(output, Operand, DecompilerSettings.ConstMaxStringLength, NumberFormatter.GetCSharpInstance(hex: false, upper: true), sb);
 				}
 				first = false;
 			}

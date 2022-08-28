@@ -51,7 +51,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 
 	public static class DisassemblerHelpers
 	{
-		static readonly char[] _validNonLetterIdentifierCharacter = new char[] { '_', '$', '@', '?', '`', '.' };
+		static readonly char[] _validNonLetterIdentifierCharacter = { '_', '$', '@', '?', '`', '.' };
 
 		const int OPERAND_ALIGNMENT = 10;
 
@@ -65,13 +65,12 @@ namespace ICSharpCode.Decompiler.Disassembler {
 
 		public static void WriteOffsetReference(IDecompilerOutput writer, Instruction instruction, MethodDef method, object data = null)
 		{
-			if (data == null)
-				data = BoxedTextColor.Label;
+			data ??= BoxedTextColor.Label;
 			var r = instruction == null ? null : method == null ? (object)instruction : new InstructionReference(method, instruction);
 			writer.Write(DnlibExtensions.OffsetToString(instruction.GetOffset()), r, DecompilerReferenceFlags.None, data);
 		}
 
-		public static void WriteTo(this ExceptionHandler exceptionHandler, IDecompilerOutput writer, MethodDef method)
+		public static void WriteTo(this ExceptionHandler exceptionHandler, IDecompilerOutput writer, StringBuilder sb, MethodDef method)
 		{
 			writer.Write(".try", BoxedTextColor.Keyword);
 			writer.Write(" ", BoxedTextColor.Text);
@@ -89,7 +88,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 			if (exceptionHandler.CatchType != null) {
 				writer.Write(" ", BoxedTextColor.Text);
-				exceptionHandler.CatchType.WriteTo(writer);
+				exceptionHandler.CatchType.WriteTo(writer, sb);
 			}
 			writer.Write(" ", BoxedTextColor.Text);
 			WriteOffsetReference(writer, exceptionHandler.HandlerStart, method);
@@ -97,7 +96,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			WriteOffsetReference(writer, exceptionHandler.HandlerEnd, method);
 		}
 
-		internal static void WriteTo(this Instruction instruction, IDecompilerOutput writer, DisassemblerOptions options, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, MethodDef method, InstructionOperandConverter instructionOperandConverter, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, out int startLocation)
+		internal static void WriteTo(this Instruction instruction, IDecompilerOutput writer, StringBuilder sb, DisassemblerOptions options, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, MethodDef method, InstructionOperandConverter instructionOperandConverter, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, out int startLocation)
 		{
 			var numberFormatter = NumberFormatter.GetCSharpInstance(hex: options.HexadecimalNumbers, upper: true);
 			if (options.ShowPdbInfo) {
@@ -138,17 +137,17 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					}
 				}
 			}
-			if (options != null && (options.ShowTokenAndRvaComments || options.ShowILBytes)) {
+			if ((options.ShowTokenAndRvaComments || options.ShowILBytes)) {
 				writer.Write("/* ", BoxedTextColor.Comment);
 
 				bool needSpace = false;
 
 				if (options.ShowTokenAndRvaComments) {
 					ulong fileOffset = (ulong)baseOffs + instruction.Offset;
-					var hexOffsetString = string.Format("0x{0:X8}", fileOffset);
+					var hexOffsetString = $"0x{fileOffset:X8}";
 					bool orig = byteReader?.IsOriginalBytes == true;
 					if (orig)
-						writer.Write(hexOffsetString, new AddressReference(options.OwnerModule == null ? null : options.OwnerModule.Location, false, fileOffset, (ulong)instruction.GetSize()), DecompilerReferenceFlags.None, BoxedTextColor.Comment);
+						writer.Write(hexOffsetString, new AddressReference(options.OwnerModule?.Location, false, fileOffset, (ulong)instruction.GetSize()), DecompilerReferenceFlags.None, BoxedTextColor.Comment);
 					else
 						writer.Write(hexOffsetString, BoxedTextColor.Comment);
 					needSpace = true;
@@ -166,7 +165,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 							if (b < 0)
 								writer.Write("??", BoxedTextColor.Comment);
 							else
-								writer.Write(string.Format("{0:X2}", b), BoxedTextColor.Comment);
+								writer.Write($"{b:X2}", BoxedTextColor.Comment);
 						}
 						// Most instructions should be at most 5 bytes in length, but use 6 since
 						// ldftn/ldvirtftn are 6 bytes long. The longest instructions are those with
@@ -201,14 +200,13 @@ namespace ICSharpCode.Decompiler.Disassembler {
 						writer.Write(" ", BoxedTextColor.Text);
 					}
 				}
-				WriteOperand(writer, instructionOperandConverter?.Convert(instruction.Operand) ?? instruction.Operand, options.MaxStringLength, numberFormatter, method);
+				WriteOperand(writer, instructionOperandConverter?.Convert(instruction.Operand) ?? instruction.Operand, options.MaxStringLength, numberFormatter, sb, method);
 			}
-			if (options != null && options.GetOpCodeDocumentation != null) {
-				var doc = options.GetOpCodeDocumentation(instruction.OpCode);
-				if (doc != null) {
-					writer.Write("\t", BoxedTextColor.Text);
-					writer.Write("// " + doc, BoxedTextColor.Comment);
-				}
+
+			var doc = options.GetOpCodeDocumentation?.Invoke(instruction.OpCode);
+			if (doc != null) {
+				writer.Write("\t", BoxedTextColor.Text);
+				writer.Write("// " + doc, BoxedTextColor.Comment);
 			}
 		}
 
@@ -256,18 +254,14 @@ namespace ICSharpCode.Decompiler.Disassembler {
 		{
 			if (value == null)
 				return "<<<NULL>>>";
-			IConvertible convertible = value as IConvertible;
-			return(null != convertible)
+			return value is IConvertible convertible
 				? convertible.ToString(System.Globalization.CultureInfo.InvariantCulture)
 				: value.ToString();
 		}
 
-		public static void WriteMethodTo(this IMethod method, IDecompilerOutput writer)
-		{
-			writer.Write((MethodSig)null, method);
-		}
+		public static void WriteMethodTo(this IMethod method, IDecompilerOutput writer, StringBuilder sb) => writer.Write(sb, null, method);
 
-		public static void Write(this IDecompilerOutput writer, MethodSig sig, IMethod method = null)
+		public static void Write(this IDecompilerOutput writer, StringBuilder sb, MethodSig sig, IMethod method = null)
 		{
 			if (sig == null && method != null)
 				sig = method.MethodSig;
@@ -287,30 +281,28 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				writer.Write("vararg", BoxedTextColor.Keyword);
 				writer.Write(" ", BoxedTextColor.Text);
 			}
-			sig.RetType.WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+			sig.RetType.WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 			writer.Write(" ", BoxedTextColor.Text);
 			if (method != null) {
 				if (method.DeclaringType != null) {
-					method.DeclaringType.WriteTo(writer, ILNameSyntax.TypeName);
+					method.DeclaringType.WriteTo(writer, sb, ILNameSyntax.TypeName);
 					writer.Write("::", BoxedTextColor.Operator);
 				}
-				MethodDef md = method as MethodDef;
-				if (md != null && md.IsCompilerControlled) {
+				if (method is MethodDef md && md.IsCompilerControlled) {
 					writer.Write(Escape(method.Name + "$PST" + method.MDToken.ToInt32().ToString("X8")), method, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(method));
 				}
 				else {
 					writer.Write(Escape(method.Name), method, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(method));
 				}
 			}
-			MethodSpec gim = method as MethodSpec;
-			if (gim != null && gim.GenericInstMethodSig != null) {
+			if (method is MethodSpec gim && gim.GenericInstMethodSig != null) {
 				var bh1 = BracePairHelper.Create(writer, "<", CodeBracesRangeFlags.AngleBrackets);
 				for (int i = 0; i < gim.GenericInstMethodSig.GenericArguments.Count; i++) {
 					if (i > 0) {
 						writer.Write(",", BoxedTextColor.Punctuation);
 						writer.Write(" ", BoxedTextColor.Text);
 					}
-					gim.GenericInstMethodSig.GenericArguments[i].WriteTo(writer);
+					gim.GenericInstMethodSig.GenericArguments[i].WriteTo(writer, sb);
 				}
 				bh1.Write(">");
 			}
@@ -321,12 +313,12 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					writer.Write(",", BoxedTextColor.Punctuation);
 					writer.Write(" ", BoxedTextColor.Text);
 				}
-				parameters[i].WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+				parameters[i].WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 			}
 			bh2.Write(")");
 		}
 
-		public static void WriteTo(this MethodSig sig, IDecompilerOutput writer)
+		public static void WriteTo(this MethodSig sig, IDecompilerOutput writer, StringBuilder sb)
 		{
 			if (sig.ExplicitThis) {
 				writer.Write("instance", BoxedTextColor.Keyword);
@@ -338,7 +330,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				writer.Write("instance", BoxedTextColor.Keyword);
 				writer.Write(" ", BoxedTextColor.Text);
 			}
-			sig.RetType.WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+			sig.RetType.WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 			writer.Write(" ", BoxedTextColor.Text);
 			var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
 			var parameters = sig.GetParameters();
@@ -347,24 +339,24 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					writer.Write(",", BoxedTextColor.Punctuation);
 					writer.Write(" ", BoxedTextColor.Text);
 				}
-				parameters[i].WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+				parameters[i].WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 			}
 			bh1.Write(")");
 		}
 
-		public static void WriteFieldTo(this IField field, IDecompilerOutput writer)
+		public static void WriteFieldTo(this IField field, IDecompilerOutput writer, StringBuilder sb)
 		{
 			if (field == null || field.FieldSig == null)
 				return;
-			field.FieldSig.Type.WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+			field.FieldSig.Type.WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 			writer.Write(" ", BoxedTextColor.Text);
-			field.DeclaringType.WriteTo(writer, ILNameSyntax.TypeName);
+			field.DeclaringType.WriteTo(writer, sb, ILNameSyntax.TypeName);
 			writer.Write("::", BoxedTextColor.Operator);
 			writer.Write(Escape(field.Name), field, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(field));
 		}
 
 		static bool IsValidIdentifierCharacter(char c)
-			=> char.IsLetterOrDigit(c) || _validNonLetterIdentifierCharacter.IndexOf(c) >= 0;
+			=> char.IsLetterOrDigit(c) || _validNonLetterIdentifierCharacter.Contains(c);
 
 		static bool IsValidIdentifier(string identifier)
 		{
@@ -384,7 +376,11 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			if (ilKeywords.Contains(identifier))
 				return false;
 
-			return identifier.All(IsValidIdentifierCharacter);
+			for (var i = 0; i < identifier.Length; i++) {
+				if (!IsValidIdentifierCharacter(identifier[i]))
+					return false;
+			}
+			return true;
 		}
 
 		static readonly HashSet<string> ilKeywords = BuildKeywordList(
@@ -448,33 +444,29 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 		}
 
-		public static void WriteTo(this TypeSig type, IDecompilerOutput writer, ILNameSyntax syntax = ILNameSyntax.Signature)
-		{
-			type.WriteTo(writer, syntax, 0);
-		}
+		public static void WriteTo(this TypeSig type, IDecompilerOutput writer, StringBuilder sb, ILNameSyntax syntax = ILNameSyntax.Signature) => type.WriteTo(writer, sb, syntax, 0);
 
 		const int MAX_CONVERTTYPE_DEPTH = 50;
-		public static void WriteTo(this TypeSig type, IDecompilerOutput writer, ILNameSyntax syntax, int depth)
+		public static void WriteTo(this TypeSig type, IDecompilerOutput writer, StringBuilder sb, ILNameSyntax syntax, int depth)
 		{
 			if (depth++ > MAX_CONVERTTYPE_DEPTH)
 				return;
 			ILNameSyntax syntaxForElementTypes = syntax == ILNameSyntax.SignatureNoNamedTypeParameters ? syntax : ILNameSyntax.Signature;
-			if (type is PinnedSig) {
-				((PinnedSig)type).Next.WriteTo(writer, syntaxForElementTypes, depth);
+			if (type is PinnedSig sig) {
+				sig.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				writer.Write(" ", BoxedTextColor.Text);
 				writer.Write("pinned", BoxedTextColor.Keyword);
-			} else if (type is ArraySig) {
-				ArraySig at = (ArraySig)type;
-				at.Next.WriteTo(writer, syntaxForElementTypes, depth);
+			} else if (type is ArraySig arraySig) {
+				arraySig.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				var bh1 = BracePairHelper.Create(writer, "[", CodeBracesRangeFlags.SquareBrackets);
-				for (int i = 0; i < at.Rank; i++)
+				for (int i = 0; i < arraySig.Rank; i++)
 				{
 					if (i != 0) {
 						writer.Write(",", BoxedTextColor.Punctuation);
 						writer.Write(" ", BoxedTextColor.Text);
 					}
-					int? lower = i < at.LowerBounds.Count ? at.LowerBounds[i] : (int?)null;
-					uint? size = i < at.Sizes.Count ? at.Sizes[i] : (uint?)null;
+					int? lower = i < arraySig.LowerBounds.Count ? arraySig.LowerBounds[i] : null;
+					uint? size = i < arraySig.Sizes.Count ? arraySig.Sizes[i] : null;
 					if (lower != null)
 					{
 						writer.Write(lower.ToString(), BoxedTextColor.Number);
@@ -487,65 +479,65 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					}
 				}
 				bh1.Write("]");
-			} else if (type is SZArraySig) {
-				SZArraySig at = (SZArraySig)type;
-				at.Next.WriteTo(writer, syntaxForElementTypes, depth);
+			} else if (type is SZArraySig at) {
+				at.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				var bh1 = BracePairHelper.Create(writer, "[", CodeBracesRangeFlags.SquareBrackets);
 				bh1.Write("]");
-			} else if (type is GenericSig) {
-				if (((GenericSig)type).IsMethodVar)
+			} else if (type is GenericSig genericSig) {
+				if (genericSig.IsMethodVar)
 					writer.Write("!!", BoxedTextColor.Operator);
 				else
 					writer.Write("!", BoxedTextColor.Operator);
-				string typeName = type.TypeName;
+				sb.Clear();
+				string typeName = FullNameFactory.Name(genericSig, false, sb);
 				if (string.IsNullOrEmpty(typeName) || typeName[0] == '!' || syntax == ILNameSyntax.SignatureNoNamedTypeParameters)
-					writer.Write(((GenericSig)type).Number.ToString(), BoxedTextColor.Number);
+					writer.Write(genericSig.Number.ToString(), BoxedTextColor.Number);
 				else
 					writer.Write(Escape(typeName), CSharpMetadataTextColorProvider.Instance.GetColor(type));
-			} else if (type is ByRefSig) {
-				((ByRefSig)type).Next.WriteTo(writer, syntaxForElementTypes, depth);
+			} else if (type is ByRefSig refSig) {
+				refSig.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				writer.Write("&", BoxedTextColor.Operator);
-			} else if (type is PtrSig) {
-				((PtrSig)type).Next.WriteTo(writer, syntaxForElementTypes, depth);
+			} else if (type is PtrSig ptrSig) {
+				ptrSig.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				writer.Write("*", BoxedTextColor.Operator);
-			} else if (type is GenericInstSig) {
-				((GenericInstSig)type).GenericType.WriteTo(writer, syntaxForElementTypes, depth);
+			} else if (type is GenericInstSig instSig) {
+				instSig.GenericType.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				var bh1 = BracePairHelper.Create(writer, "<", CodeBracesRangeFlags.AngleBrackets);
-				var arguments = ((GenericInstSig)type).GenericArguments;
+				var arguments = instSig.GenericArguments;
 				for (int i = 0; i < arguments.Count; i++) {
 					if (i > 0) {
 						writer.Write(",", BoxedTextColor.Punctuation);
 						writer.Write(" ", BoxedTextColor.Text);
 					}
-					arguments[i].WriteTo(writer, syntaxForElementTypes, depth);
+					arguments[i].WriteTo(writer, sb, syntaxForElementTypes, depth);
 				}
 				bh1.Write(">");
-			} else if (type is CModOptSig) {
-				((ModifierSig)type).Next.WriteTo(writer, syntax, depth);
+			} else if (type is CModOptSig optSig) {
+				optSig.Next.WriteTo(writer, sb, syntax, depth);
 				writer.Write(" ", BoxedTextColor.Text);
 				writer.Write("modopt", BoxedTextColor.Keyword);
 				var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
-				((ModifierSig)type).Modifier.WriteTo(writer, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
+				optSig.Modifier.WriteTo(writer, sb, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
 				bh1.Write(")");
 				writer.Write(" ", BoxedTextColor.Text);
 			}
-			else if (type is CModReqdSig) {
-				((ModifierSig)type).Next.WriteTo(writer, syntax, depth);
+			else if (type is CModReqdSig reqdSig) {
+				reqdSig.Next.WriteTo(writer, sb, syntax, depth);
 				writer.Write(" ", BoxedTextColor.Text);
 				writer.Write("modreq", BoxedTextColor.Keyword);
 				var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
-				((ModifierSig)type).Modifier.WriteTo(writer, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
+				reqdSig.Modifier.WriteTo(writer, sb, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
 				bh1.Write(")");
 				writer.Write(" ", BoxedTextColor.Text);
 			}
-			else if (type is SentinelSig) {
+			else if (type is SentinelSig sentinelSig) {
 				writer.Write("...", BoxedTextColor.Text);
-				((SentinelSig)type).Next.WriteTo(writer, syntax, depth);
+				sentinelSig.Next.WriteTo(writer, sb, syntax, depth);
 			}
 			else if (type is FnPtrSig fnPtrSig) {
 				writer.Write("method", BoxedTextColor.Keyword);
 				writer.Write(" ", BoxedTextColor.Text);
-				fnPtrSig.MethodSig.RetType.WriteTo(writer, syntax, depth);
+				fnPtrSig.MethodSig.RetType.WriteTo(writer, sb, syntax, depth);
 				writer.Write(" ", BoxedTextColor.Text);
 				writer.Write("*", BoxedTextColor.Punctuation);
 				var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
@@ -555,7 +547,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 						writer.Write(",", BoxedTextColor.Punctuation);
 						writer.Write(" ", BoxedTextColor.Text);
 					}
-					parameters[i].WriteTo(writer, ILNameSyntax.SignatureNoNamedTypeParameters);
+					parameters[i].WriteTo(writer, sb, ILNameSyntax.SignatureNoNamedTypeParameters);
 				}
 				bh1.Write(")");
 			}
@@ -567,25 +559,22 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					isVT = ThreeState.Yes;
 				else
 					isVT = ThreeState.Unknown;
-				WriteTo(tdrs.TypeDefOrRef, writer, syntax, isVT, depth);
+				WriteTo(tdrs.TypeDefOrRef, writer, sb, syntax, isVT, depth);
 			}
 		}
 
-		public static void WriteTo(this ITypeDefOrRef type, IDecompilerOutput writer, ILNameSyntax syntax = ILNameSyntax.Signature)
-		{
-			type.WriteTo(writer, syntax, ThreeState.Unknown, 0);
-		}
+		public static void WriteTo(this ITypeDefOrRef type, IDecompilerOutput writer, StringBuilder sb, ILNameSyntax syntax = ILNameSyntax.Signature) => type.WriteTo(writer, sb, syntax, ThreeState.Unknown, 0);
 
-		internal static void WriteTo(this ITypeDefOrRef type, IDecompilerOutput writer, ILNameSyntax syntax, ThreeState isValueType, int depth)
+		internal static void WriteTo(this ITypeDefOrRef type, IDecompilerOutput writer, StringBuilder sb, ILNameSyntax syntax, ThreeState isValueType, int depth)
 		{
 			if (depth++ > MAX_CONVERTTYPE_DEPTH || type == null)
 				return;
-			var ts = type as TypeSpec;
-			if (ts != null) {
-				WriteTo(((TypeSpec)type).TypeSig, writer, syntax, depth);
+			if (type is TypeSpec ts) {
+				WriteTo(ts.TypeSig, writer, sb, syntax, depth);
 				return;
 			}
-			string typeFullName = type.FullName;
+			sb.Clear();
+			string typeFullName = FullNameFactory.FullName(type, false, null, sb);
 			string typeName = type.Name.String;
 			TypeSig typeSig = null;
 			string name = type.DefinitionAssembly.IsCorLib() ? PrimitiveTypeName(typeFullName, type.Module, out typeSig) : null;
@@ -608,16 +597,16 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				}
 
 				if (type.DeclaringType != null) {
-					type.DeclaringType.WriteTo(writer, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
+					type.DeclaringType.WriteTo(writer, sb, ILNameSyntax.TypeName, ThreeState.Unknown, depth);
 					writer.Write("/", BoxedTextColor.Operator);
 					writer.Write(Escape(typeName), type, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(type));
 				} else {
-					if (!(type is TypeDef) && type.Scope != null && !(type is TypeSpec)) {
+					if (!(type is TypeDef) && type.Scope != null) {
 						var bh1 = BracePairHelper.Create(writer, "[", CodeBracesRangeFlags.SquareBrackets);
 						writer.Write(Escape(type.Scope.GetScopeName()), type.Scope, DecompilerReferenceFlags.None, BoxedTextColor.ILModule);
 						bh1.Write("]");
 					}
-					if (ts != null || MustEscape(typeFullName))
+					if (MustEscape(typeFullName))
 						writer.Write(Escape(typeFullName), type, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(type));
 					else {
 						WriteNamespace(writer, type.Namespace, type.DefinitionAssembly);
@@ -664,28 +653,24 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 		}
 
-		public static void WriteOperand(IDecompilerOutput writer, object operand, int maxStringLength, NumberFormatter numberFormatter, MethodDef method = null)
+		public static void WriteOperand(IDecompilerOutput writer, object operand, int maxStringLength, NumberFormatter numberFormatter, StringBuilder sb, MethodDef method = null)
 		{
-			Instruction targetInstruction = operand as Instruction;
-			if (targetInstruction != null) {
+			if (operand is Instruction targetInstruction) {
 				WriteOffsetReference(writer, targetInstruction, method);
 				return;
 			}
 
-			IList<Instruction> targetInstructions = operand as IList<Instruction>;
-			if (targetInstructions != null) {
+			if (operand is IList<Instruction> targetInstructions) {
 				WriteLabelList(writer, targetInstructions, method);
 				return;
 			}
 
-			SourceLocal variable = operand as SourceLocal;
-			if (variable != null) {
+			if (operand is SourceLocal variable) {
 				writer.Write(Escape(variable.Name), variable, DecompilerReferenceFlags.None, BoxedTextColor.Local);
 				return;
 			}
 
-			Parameter paramRef = operand as Parameter;
-			if (paramRef != null) {
+			if (operand is Parameter paramRef) {
 				if (string.IsNullOrEmpty(paramRef.Name)) {
 					if (paramRef.IsHiddenThisParameter)
 						writer.Write("<hidden-this>", paramRef, DecompilerReferenceFlags.None, BoxedTextColor.Parameter);
@@ -697,65 +682,57 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				return;
 			}
 
-			MemberRef memberRef = operand as MemberRef;
-			if (memberRef != null) {
+			if (operand is MemberRef memberRef) {
 				if (memberRef.IsMethodRef)
-					memberRef.WriteMethodTo(writer);
+					memberRef.WriteMethodTo(writer, sb);
 				else
-					memberRef.WriteFieldTo(writer);
+					memberRef.WriteFieldTo(writer, sb);
 				return;
 			}
 
-			MethodDef methodDef = operand as MethodDef;
-			if (methodDef != null) {
-				methodDef.WriteMethodTo(writer);
+			if (operand is MethodDef methodDef) {
+				methodDef.WriteMethodTo(writer, sb);
 				return;
 			}
 
-			FieldDef fieldDef = operand as FieldDef;
-			if (fieldDef != null) {
-				fieldDef.WriteFieldTo(writer);
+			if (operand is FieldDef fieldDef) {
+				fieldDef.WriteFieldTo(writer, sb);
 				return;
 			}
 
-			ITypeDefOrRef typeRef = operand as ITypeDefOrRef;
-			if (typeRef != null) {
-				typeRef.WriteTo(writer, ILNameSyntax.TypeName);
+			if (operand is ITypeDefOrRef typeRef) {
+				typeRef.WriteTo(writer, sb, ILNameSyntax.TypeName);
 				return;
 			}
 
-			IMethod m = operand as IMethod;
-			if (m != null) {
-				m.WriteMethodTo(writer);
+			if (operand is IMethod m) {
+				m.WriteMethodTo(writer, sb);
 				return;
 			}
 
-			MethodSig sig = operand as MethodSig;
-			if (sig != null) {
-				sig.WriteTo(writer);
+			if (operand is MethodSig sig) {
+				sig.WriteTo(writer, sb);
 				return;
 			}
 
 			const DecompilerReferenceFlags numberFlags = DecompilerReferenceFlags.Local | DecompilerReferenceFlags.Hidden | DecompilerReferenceFlags.NoFollow;
-			string s = operand as string;
-			if (s != null) {
+			if (operand is string s) {
 				int start = writer.NextPosition;
 				writer.Write("\"" + NRefactory.CSharp.TextWriterTokenWriter.ConvertStringMaxLength(s, maxStringLength) + "\"", BoxedTextColor.String);
 				int end = writer.NextPosition;
 				writer.AddBracePair(new TextSpan(start, 1), new TextSpan(end - 1, 1), CodeBracesRangeFlags.DoubleQuotes);
-			} else if (operand is char) {
-				writer.Write(numberFormatter.Format((int)(char)operand), BoxedTextColor.Number);
-			} else if (operand is float) {
-				float val = (float)operand;
-				if (val == 0) {
-					if (1 / val == float.NegativeInfinity) {
+			} else if (operand is char c) {
+				writer.Write(numberFormatter.Format((int)c), BoxedTextColor.Number);
+			} else if (operand is float f) {
+				if (f == 0) {
+					if (1 / f == float.NegativeInfinity) {
 						// negative zero is a special case
-						writer.Write("-0.0", operand, numberFlags, BoxedTextColor.Number);
+						writer.Write("-0.0", f, numberFlags, BoxedTextColor.Number);
 					}
 					else
-						writer.Write("0.0", operand, numberFlags, BoxedTextColor.Number);
-				} else if (float.IsInfinity(val) || float.IsNaN(val)) {
-					byte[] data = BitConverter.GetBytes(val);
+						writer.Write("0.0", f, numberFlags, BoxedTextColor.Number);
+				} else if (float.IsInfinity(f) || float.IsNaN(f)) {
+					byte[] data = BitConverter.GetBytes(f);
 					var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
 					for (int i = 0; i < data.Length; i++) {
 						if (i > 0)
@@ -764,17 +741,16 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					}
 					bh1.Write(")");
 				} else {
-					writer.Write(val.ToString("R", System.Globalization.CultureInfo.InvariantCulture), operand, numberFlags, BoxedTextColor.Number);
+					writer.Write(f.ToString("R", System.Globalization.CultureInfo.InvariantCulture), f, numberFlags, BoxedTextColor.Number);
 				}
-			} else if (operand is double) {
-				double val = (double)operand;
+			} else if (operand is double val) {
 				if (val == 0) {
 					if (1 / val == double.NegativeInfinity) {
 						// negative zero is a special case
-						writer.Write("-0.0", operand, numberFlags, BoxedTextColor.Number);
+						writer.Write("-0.0", val, numberFlags, BoxedTextColor.Number);
 					}
 					else
-						writer.Write("0.0", operand, numberFlags, BoxedTextColor.Number);
+						writer.Write("0.0", val, numberFlags, BoxedTextColor.Number);
 				} else if (double.IsInfinity(val) || double.IsNaN(val)) {
 					byte[] data = BitConverter.GetBytes(val);
 					var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
@@ -785,12 +761,12 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					}
 					bh1.Write(")");
 				} else {
-					writer.Write(val.ToString("R", System.Globalization.CultureInfo.InvariantCulture), operand, numberFlags, BoxedTextColor.Number);
+					writer.Write(val.ToString("R", System.Globalization.CultureInfo.InvariantCulture), val, numberFlags, BoxedTextColor.Number);
 				}
-			} else if (operand is bool) {
-				writer.Write((bool)operand ? "true" : "false", BoxedTextColor.Keyword);
+			} else if (operand is bool b) {
+				writer.Write(b ? "true" : "false", BoxedTextColor.Keyword);
 			} else {
-				if (operand == null)
+				if (operand is null)
 					writer.Write("<null>", BoxedTextColor.Error);
 				else {
 					switch (operand) {
@@ -829,7 +805,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 
 		public static string PrimitiveTypeName(string fullName, ModuleDef module, out TypeSig typeSig)
 		{
-			var corLibTypes = module == null ? null : module.CorLibTypes;
+			var corLibTypes = module?.CorLibTypes;
 			typeSig = null;
 			switch (fullName) {
 				case "System.SByte":

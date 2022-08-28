@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2010-2013 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -36,7 +36,7 @@ namespace ICSharpCode.NRefactory.CSharp
 	{
 		readonly AstNode node;
 		readonly Role<T> role;
-		
+
 		public AstNodeCollection(AstNode node, Role<T> role)
 		{
 			if (node == null)
@@ -46,7 +46,7 @@ namespace ICSharpCode.NRefactory.CSharp
 			this.node = node;
 			this.role = role;
 		}
-		
+
 		public int Count {
 			get {
 				int count = 0;
@@ -58,12 +58,12 @@ namespace ICSharpCode.NRefactory.CSharp
 				return count;
 			}
 		}
-		
+
 		public void Add(T element)
 		{
 			node.AddChild(element, role);
 		}
-		
+
 		public void AddRange(IEnumerable<T> nodes)
 		{
 			// Evaluate 'nodes' first, since it might change when we add the new children
@@ -73,7 +73,7 @@ namespace ICSharpCode.NRefactory.CSharp
 					Add(node);
 			}
 		}
-		
+
 		public void AddRange(T[] nodes)
 		{
 			// Fast overload for arrays - we don't need to create a copy
@@ -82,7 +82,16 @@ namespace ICSharpCode.NRefactory.CSharp
 					Add(node);
 			}
 		}
-		
+
+		public void AddRange(ICollection<T> nodes)
+		{
+			// Fast overload for ICollection<T> - we don't need to create a copy
+			if (nodes != null) {
+				foreach (T node in nodes)
+					Add(node);
+			}
+		}
+
 		public void ReplaceWith(IEnumerable<T> nodes)
 		{
 			// Evaluate 'nodes' first, since it might change when we call Clear()
@@ -95,7 +104,7 @@ namespace ICSharpCode.NRefactory.CSharp
 					Add(node);
 			}
 		}
-		
+
 		public void MoveTo(ICollection<T> targetCollection)
 		{
 			if (targetCollection == null)
@@ -105,12 +114,12 @@ namespace ICSharpCode.NRefactory.CSharp
 				targetCollection.Add(node);
 			}
 		}
-		
+
 		public bool Contains(T element)
 		{
 			return element != null && element.Parent == node && element.RoleIndex == role.Index;
 		}
-		
+
 		public bool Remove(T element)
 		{
 			if (Contains(element)) {
@@ -120,19 +129,19 @@ namespace ICSharpCode.NRefactory.CSharp
 				return false;
 			}
 		}
-		
+
 		public void CopyTo(T[] array, int arrayIndex)
 		{
 			foreach (T item in this)
 				array[arrayIndex++] = item;
 		}
-		
+
 		public void Clear()
 		{
 			foreach (T item in this)
 				item.Remove();
 		}
-		
+
 		/// <summary>
 		/// Returns the first element for which the predicate returns true,
 		/// or the null node (AstNode with IsNull=true) if no such object is found.
@@ -144,7 +153,7 @@ namespace ICSharpCode.NRefactory.CSharp
 					return item;
 			return role.NullObject;
 		}
-		
+
 		/// <summary>
 		/// Returns the last element for which the predicate returns true,
 		/// or the null node (AstNode with IsNull=true) if no such object is found.
@@ -157,11 +166,11 @@ namespace ICSharpCode.NRefactory.CSharp
 					result = item;
 			return result;
 		}
-		
+
 		bool ICollection<T>.IsReadOnly {
 			get { return false; }
 		}
-		
+
 		public IEnumerator<T> GetEnumerator()
 		{
 			uint roleIndex = role.Index;
@@ -175,18 +184,18 @@ namespace ICSharpCode.NRefactory.CSharp
 					yield return (T)cur;
 			}
 		}
-		
+
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
 		}
-		
+
 		#region Equals and GetHashCode implementation
 		public override int GetHashCode()
 		{
 			return node.GetHashCode() ^ role.GetHashCode();
 		}
-		
+
 		public override bool Equals(object obj)
 		{
 			AstNodeCollection<T> other = obj as AstNodeCollection<T>;
@@ -195,22 +204,22 @@ namespace ICSharpCode.NRefactory.CSharp
 			return this.node == other.node && this.role == other.role;
 		}
 		#endregion
-		
+
 		internal bool DoMatch(AstNodeCollection<T> other, Match match)
 		{
 			return Pattern.DoMatchCollection(role, node.FirstChild, other.node.FirstChild, match);
 		}
-		
+
 		public void InsertAfter(T existingItem, T newItem)
 		{
 			node.InsertChildAfter(existingItem, newItem, role);
 		}
-		
+
 		public void InsertBefore(T existingItem, T newItem)
 		{
 			node.InsertChildBefore(existingItem, newItem, role);
 		}
-		
+
 		/// <summary>
 		/// Applies the <paramref name="visitor"/> to all nodes in this collection.
 		/// </summary>

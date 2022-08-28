@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using dnlib.DotNet.Pdb;
@@ -36,17 +37,19 @@ namespace ICSharpCode.Decompiler.Disassembler {
 		readonly bool detectControlStructure;
 		readonly DisassemblerOptions options;
 		readonly NumberFormatter numberFormatter;
-		
-		public MethodBodyDisassembler(IDecompilerOutput output, bool detectControlStructure, DisassemblerOptions options)
+		readonly StringBuilder sb;
+
+		public MethodBodyDisassembler(IDecompilerOutput output, bool detectControlStructure, DisassemblerOptions options, StringBuilder stringBuilder)
 		{
 			if (output == null)
 				throw new ArgumentNullException("output");
 			this.output = output;
 			this.detectControlStructure = detectControlStructure;
 			this.options = options;
+			sb = stringBuilder;
 			numberFormatter = NumberFormatter.GetCSharpInstance(hex: options.HexadecimalNumbers, upper: true);
 		}
-		
+
 		public void Disassemble(MethodDef method, MethodDebugInfoBuilder builder, InstructionOperandConverter instructionOperandConverter)
 		{
 			// start writing IL code
@@ -69,7 +72,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			output.WriteLine(numberFormatter.Format(body.MaxStack), BoxedTextColor.Number);
             if (method.DeclaringType.Module.EntryPoint == method)
                 output.WriteLine (".entrypoint", BoxedTextColor.ILDirective);
-			
+
 			if (body.HasVariables) {
 				output.Write(".locals", BoxedTextColor.ILDirective);
 				output.Write(" ", BoxedTextColor.Text);
@@ -90,7 +93,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 						output.Write(numberFormatter.Format(local.Local.Index), local, DecompilerReferenceFlags.Local | DecompilerReferenceFlags.Definition, BoxedTextColor.Number);
 					bh2.Write("]");
 					output.Write(" ", BoxedTextColor.Text);
-					local.Type.WriteTo(output);
+					local.Type.WriteTo(output, sb);
 					if (hasName) {
 						output.Write(" ", BoxedTextColor.Text);
 						output.Write(DisassemblerHelpers.Escape(local.Name), local, DecompilerReferenceFlags.Local | DecompilerReferenceFlags.Definition, BoxedTextColor.Local);
@@ -114,14 +117,14 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			if (detectControlStructure && body.Instructions.Count > 0) {
 				int index = 0;
 				HashSet<uint> branchTargets = GetBranchTargets(body.Instructions);
-				WriteStructureBody(body, new ILStructure(body), branchTargets, ref index, builder, instructionOperandConverter, body.GetCodeSize(), baseRva, baseOffs, byteReader, pdbAsyncInfo, method);
+				WriteStructureBody(body, new ILStructure(body), branchTargets, ref index, builder, instructionOperandConverter, body.GetCodeSize(), baseRva, baseOffs, byteReader, pdbAsyncInfo, method, sb);
 			}
 			else {
 				var instructions = body.Instructions;
 				for (int i = 0; i < instructions.Count; i++) {
 					var inst = instructions[i];
 					int startLocation;
-					inst.WriteTo(output, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out startLocation);
+					inst.WriteTo(output, sb, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out startLocation);
 
 					if (builder != null) {
 						var next = i + 1 < instructions.Count ? instructions[i + 1] : null;
@@ -133,13 +136,13 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				if (body.HasExceptionHandlers) {
 					output.WriteLine();
 					foreach (var eh in body.ExceptionHandlers) {
-						eh.WriteTo(output, method);
+						eh.WriteTo(output, sb, method);
 						output.WriteLine();
 					}
 				}
 			}
 		}
-		
+
 		HashSet<uint> GetBranchTargets(IEnumerable<Instruction> instructions)
 		{
 			HashSet<uint> branchTargets = new HashSet<uint>();
@@ -155,8 +158,8 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 			return branchTargets;
 		}
-		
-		BracePairHelper WriteStructureHeader(ILStructure s)
+
+		BracePairHelper WriteStructureHeader(ILStructure s, StringBuilder sb)
 		{
 			BracePairHelper bh;
 			switch (s.Type) {
@@ -183,7 +186,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 							output.Write("catch", BoxedTextColor.Keyword);
 							if (s.ExceptionHandler.CatchType != null) {
 								output.Write(" ", BoxedTextColor.Text);
-								s.ExceptionHandler.CatchType.WriteTo(output, ILNameSyntax.TypeName);
+								s.ExceptionHandler.CatchType.WriteTo(output, sb, ILNameSyntax.TypeName);
 							}
 							output.WriteLine();
 							bpk = s.ExceptionHandler.HandlerType == ExceptionHandlerType.Catch ? CodeBracesRangeFlags.CatchBraces : CodeBracesRangeFlags.FilterBraces;
@@ -215,8 +218,8 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			output.IncreaseIndent();
 			return bh;
 		}
-		
-		void WriteStructureBody(CilBody body, ILStructure s, HashSet<uint> branchTargets, ref int index, MethodDebugInfoBuilder builder, InstructionOperandConverter instructionOperandConverter, int codeSize, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, MethodDef method)
+
+		void WriteStructureBody(CilBody body, ILStructure s, HashSet<uint> branchTargets, ref int index, MethodDebugInfoBuilder builder, InstructionOperandConverter instructionOperandConverter, int codeSize, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, MethodDef method, StringBuilder sb)
 		{
 			bool isFirstInstructionInStructure = true;
 			bool prevInstructionWasBranch = false;
@@ -229,34 +232,34 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				uint offset = inst.Offset;
 				if (childIndex < s.Children.Count && s.Children[childIndex].StartOffset <= offset && offset < s.Children[childIndex].EndOffset) {
 					ILStructure child = s.Children[childIndex++];
-					var bh = WriteStructureHeader(child);
-					WriteStructureBody(body, child, branchTargets, ref index, builder, instructionOperandConverter, codeSize, baseRva, baseOffs, byteReader, pdbAsyncInfo, method);
+					var bh = WriteStructureHeader(child, sb);
+					WriteStructureBody(body, child, branchTargets, ref index, builder, instructionOperandConverter, codeSize, baseRva, baseOffs, byteReader, pdbAsyncInfo, method, sb);
 					WriteStructureFooter(child, bh);
 				} else {
 					if (!isFirstInstructionInStructure && (prevInstructionWasBranch || branchTargets.Contains(offset))) {
 						output.WriteLine(); // put an empty line after branches, and in front of branch targets
 					}
 					int startLocation;
-					inst.WriteTo(output, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out startLocation);
-					
+					inst.WriteTo(output, sb, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out startLocation);
+
 					if (builder != null) {
 						var next = index + 1 < instructions.Count ? instructions[index + 1] : null;
 						builder.Add(new SourceStatement(ILSpan.FromBounds(inst.Offset, next == null ? (uint)codeSize : next.Offset), new TextSpan(startLocation, output.NextPosition - startLocation)));
 					}
-					
+
 					output.WriteLine();
-					
+
 					prevInstructionWasBranch = inst.OpCode.FlowControl == FlowControl.Branch
 						|| inst.OpCode.FlowControl == FlowControl.Cond_Branch
 						|| inst.OpCode.FlowControl == FlowControl.Return
 						|| inst.OpCode.FlowControl == FlowControl.Throw;
-					
+
 					index++;
 				}
 				isFirstInstructionInStructure = false;
 			}
 		}
-		
+
 		void WriteStructureFooter(ILStructure s, BracePairHelper bh)
 		{
 			output.DecreaseIndent();
