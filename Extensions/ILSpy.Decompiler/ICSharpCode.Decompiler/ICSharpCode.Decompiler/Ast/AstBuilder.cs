@@ -250,7 +250,7 @@ namespace ICSharpCode.Decompiler.Ast {
 				return true;
 
 			const string VB_PATTERN = "Event";
-			if (fieldName.Length == VB_PATTERN.Length + eventName.Length && fieldName.StartsWith(eventName) && fieldName.EndsWith(VB_PATTERN))
+			if (fieldName.Length == VB_PATTERN.Length + eventName.Length && fieldName.StartsWith(eventName, StringComparison.Ordinal) && fieldName.EndsWith(VB_PATTERN, StringComparison.Ordinal))
 				return true;
 
 			return false;
@@ -1139,18 +1139,28 @@ namespace ICSharpCode.Decompiler.Ast {
 
 				var pd = def as PropertyDef;
 				if (pd != null) {
-					if (pd.GetMethod == null && pd.SetMethod == null)
-						continue;
-					astType.Members.Add(CreateProperty(pd));
+					if (pd.GetMethod is not null || pd.SetMethod is not null)
+						astType.Members.Add(CreateProperty(pd));
+
+					// Methods marked as 'other' are not supported in C#
+					foreach (var otherMethod in pd.OtherMethods)
+						astType.Members.Add(CreateMethod(otherMethod));
+
 					continue;
 				}
 
 				var ed = def as EventDef;
 				if (ed != null) {
-					if (ed.AddMethod == null && ed.RemoveMethod == null)
-						continue;
-					astType.AddChild(CreateEvent(ed), Roles.TypeMemberRole);
-					continue;
+					if (ed.AddMethod is not null || ed.RemoveMethod is not null)
+						astType.Members.Add(CreateEvent(ed));
+
+					// Methods marked as 'fire' are not supported in C#
+					if (ed.InvokeMethod is not null)
+						astType.Members.Add(CreateMethod(ed.InvokeMethod));
+
+					// Methods marked as 'other' are not supported in C#
+					foreach (var otherMethod in ed.OtherMethods)
+						astType.Members.Add(CreateMethod(otherMethod));
 				}
 
 				Debug.Fail("Shouldn't be here");
@@ -1229,6 +1239,12 @@ namespace ICSharpCode.Decompiler.Ast {
 			if (DnlibExtensions.HasIsReadOnlyAttribute(methodDef.Parameters.ReturnParameter.ParamDef))
 				astMethod.Modifiers |= Modifiers.Readonly;
 			AddComment(returnValue, methodDef);
+
+			if (methodDef.IsOther)
+				returnValue.InsertChildAfter(null, new Comment(" Note: this method is marked as 'other'."), Roles.Comment);
+			else if (methodDef.IsFire)
+				returnValue.InsertChildAfter(null, new Comment(" Note: this method is marked as 'fire'."), Roles.Comment);
+
 			return returnValue;
 		}
 

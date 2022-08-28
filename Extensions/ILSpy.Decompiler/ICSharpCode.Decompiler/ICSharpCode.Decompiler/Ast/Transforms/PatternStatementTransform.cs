@@ -1293,7 +1293,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 		PropertyDeclaration TransformAutomaticProperties(PropertyDeclaration property)
 		{
 			PropertyDef prop = property.Annotation<PropertyDef>();
-			if (prop == null || prop.GetMethod == null)
+			if (prop == null || prop.GetMethod == null || prop.HasOtherMethods)
 				return null;
 			if (!prop.GetMethod.IsCompilerGenerated())
 				return null;
