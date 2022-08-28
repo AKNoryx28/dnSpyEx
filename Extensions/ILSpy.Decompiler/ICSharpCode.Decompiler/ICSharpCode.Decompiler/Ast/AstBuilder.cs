@@ -1143,8 +1143,11 @@ namespace ICSharpCode.Decompiler.Ast {
 						astType.Members.Add(CreateProperty(pd));
 
 					// Methods marked as 'other' are not supported in C#
-					foreach (var otherMethod in pd.OtherMethods)
+					foreach (var otherMethod in pd.OtherMethods) {
+						if (otherMethod.DeclaringType != pd.DeclaringType)
+							continue;
 						astType.Members.Add(CreateMethod(otherMethod));
+					}
 
 					continue;
 				}
@@ -1155,12 +1158,15 @@ namespace ICSharpCode.Decompiler.Ast {
 						astType.Members.Add(CreateEvent(ed));
 
 					// Methods marked as 'fire' are not supported in C#
-					if (ed.InvokeMethod is not null)
+					if (ed.InvokeMethod is not null && ed.InvokeMethod.DeclaringType == ed.DeclaringType)
 						astType.Members.Add(CreateMethod(ed.InvokeMethod));
 
 					// Methods marked as 'other' are not supported in C#
-					foreach (var otherMethod in ed.OtherMethods)
+					foreach (var otherMethod in ed.OtherMethods) {
+						if (otherMethod.DeclaringType != ed.DeclaringType)
+							continue;
 						astType.Members.Add(CreateMethod(otherMethod));
+					}
 				}
 
 				Debug.Fail("Shouldn't be here");
