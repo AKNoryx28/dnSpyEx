@@ -493,7 +493,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				if (string.IsNullOrEmpty(typeName) || typeName[0] == '!' || syntax == ILNameSyntax.SignatureNoNamedTypeParameters)
 					writer.Write(genericSig.Number.ToString(), BoxedTextColor.Number);
 				else
-					writer.Write(Escape(typeName), CSharpMetadataTextColorProvider.Instance.GetColor(type));
+					writer.Write(Escape(typeName), genericSig.GenericParam, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(type));
 			} else if (type is ByRefSig refSig) {
 				refSig.Next.WriteTo(writer, sb, syntaxForElementTypes, depth);
 				writer.Write("&", BoxedTextColor.Operator);
@@ -531,7 +531,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				writer.Write(" ", BoxedTextColor.Text);
 			}
 			else if (type is SentinelSig sentinelSig) {
-				writer.Write("...", BoxedTextColor.Text);
+				writer.Write("...", BoxedTextColor.Operator);
 				sentinelSig.Next.WriteTo(writer, sb, syntax, depth);
 			}
 			else if (type is FnPtrSig fnPtrSig) {
@@ -539,7 +539,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				writer.Write(" ", BoxedTextColor.Text);
 				fnPtrSig.MethodSig.RetType.WriteTo(writer, sb, syntax, depth);
 				writer.Write(" ", BoxedTextColor.Text);
-				writer.Write("*", BoxedTextColor.Punctuation);
+				writer.Write("*", BoxedTextColor.Operator);
 				var bh1 = BracePairHelper.Create(writer, "(", CodeBracesRangeFlags.Parentheses);
 				var parameters = fnPtrSig.MethodSig.GetParameters();
 				for (int i = 0; i < parameters.Count; ++i) {

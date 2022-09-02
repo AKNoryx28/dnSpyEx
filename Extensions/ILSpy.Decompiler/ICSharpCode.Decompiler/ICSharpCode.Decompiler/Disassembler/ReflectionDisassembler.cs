@@ -901,8 +901,10 @@ namespace ICSharpCode.Decompiler.Disassembler {
 						}
 						if ((sami.VariantType & VariantType.ByRef) != 0)
 							output.Write("&", BoxedTextColor.Operator);
-						if ((sami.VariantType & VariantType.Array) != 0)
-							output.Write("[]", BoxedTextColor.Punctuation);
+						if ((sami.VariantType & VariantType.Array) != 0) {
+							var bh = BracePairHelper.Create(output, "[", CodeBracesRangeFlags.SquareBrackets);
+							bh.Write("]");
+						}
 						if ((sami.VariantType & VariantType.Vector) != 0) {
 							output.Write(" ", BoxedTextColor.Text);
 							output.Write("vector", BoxedTextColor.Keyword);
@@ -1076,7 +1078,8 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					output.Write("constraint", BoxedTextColor.Keyword);
 					output.Write(" ", BoxedTextColor.Text);
 					output.Write(DisassemblerHelpers.Escape(p.Name), CSharpMetadataTextColorProvider.Instance.GetColor(p));
-					output.Write(", ", BoxedTextColor.Text);
+					output.Write(",", BoxedTextColor.Punctuation);
+					output.Write(" ", BoxedTextColor.Text);
 					constraint.Constraint.WriteTo(output, sb, ILNameSyntax.TypeName);
 					output.WriteLine();
 					output.IncreaseIndent();
@@ -1176,13 +1179,13 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			output.Write(" ", BoxedTextColor.Text);
 			output.Write(DisassemblerHelpers.Escape(field.Name), field, DecompilerReferenceFlags.Definition, CSharpMetadataTextColorProvider.Instance.GetColor(field));
 			char sectionPrefix = 'D';
-			if ((field.Attributes & FieldAttributes.HasFieldRVA) == FieldAttributes.HasFieldRVA) {
+			if (field.HasFieldRVA) {
 				sectionPrefix = GetRVASectionPrefix(field.Module, field.RVA);
 
 				output.Write(" ", BoxedTextColor.Text);
 				output.Write("at", BoxedTextColor.Keyword);
 				output.Write(" ", BoxedTextColor.Text);
-				output.Write(string.Format("{1}_{0:x8}", (uint)field.RVA, sectionPrefix), field.InitialValue, DecompilerReferenceFlags.None, BoxedTextColor.Text);
+				output.Write(string.Format("{1}_{0:x8}", (uint)field.RVA, sectionPrefix), field.InitialValue, DecompilerReferenceFlags.None, BoxedTextColor.Label);
 			}
 			if (field.HasConstant) {
 				output.Write(" ", BoxedTextColor.Text);
@@ -1195,7 +1198,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			output.WriteLine();
 			WriteAttributes(field.CustomAttributes);
 
-			if ((field.Attributes & FieldAttributes.HasFieldRVA) == FieldAttributes.HasFieldRVA) {
+			if (field.HasFieldRVA) {
 				var sectionHeader = field.Module.GetContainingSection(field.RVA);
 				if (sectionHeader is null) {
 					output.Write($"// RVA {(uint)field.RVA:X8} invalid (not in any section)", BoxedTextColor.Comment);
@@ -1216,7 +1219,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 							output.Write($"/* {sectionHeader.DisplayName} */", BoxedTextColor.Comment);
 						}
 						output.Write(" ", BoxedTextColor.Text);
-						output.Write(string.Format("{1}_{0:x8}", (uint)field.RVA, sectionPrefix), initVal, DecompilerReferenceFlags.Definition | DecompilerReferenceFlags.IsWrite, BoxedTextColor.Text);
+						output.Write(string.Format("{1}_{0:x8}", (uint)field.RVA, sectionPrefix), initVal, DecompilerReferenceFlags.Definition | DecompilerReferenceFlags.IsWrite, BoxedTextColor.Label);
 						output.Write(" ", BoxedTextColor.Text);
 						output.Write("=", BoxedTextColor.Operator);
 						output.Write(" ", BoxedTextColor.Text);
@@ -1634,7 +1637,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					} else if (gp.IsCovariant) {
 						output.Write("+", BoxedTextColor.Operator);
 					}
-					output.Write(DisassemblerHelpers.Escape(gp.Name), CSharpMetadataTextColorProvider.Instance.GetColor(gp));
+					output.Write(DisassemblerHelpers.Escape(gp.Name), gp, DecompilerReferenceFlags.Definition, CSharpMetadataTextColorProvider.Instance.GetColor(gp));
 				}
 				bh2.Write(">");
 			}
@@ -1716,7 +1719,13 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				}
 			}
 			if ((val & ~tested) != 0) {
-				output.Write(string.Format("flag({0:x4})", val & ~tested), BoxedTextColor.Keyword);
+				output.Write("flag", BoxedTextColor.Keyword);
+				int leftStart = output.NextPosition;
+				output.Write("(", BoxedTextColor.Keyword);
+				output.Write($"{val & ~tested:x4}", BoxedTextColor.Keyword);
+				int rightStart = output.NextPosition;
+				output.Write(")", BoxedTextColor.Keyword);
+				output.AddBracePair(new TextSpan(leftStart, 1), new TextSpan(rightStart, 1), CodeBracesRangeFlags.Parentheses);
 				output.Write(" ", BoxedTextColor.Text);
 			}
 		}
@@ -1736,7 +1745,13 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				}
 			}
 			if (val != 0) {
-				output.Write(string.Format("flag({0:x4})", val), BoxedTextColor.Keyword);
+				output.Write("flag", BoxedTextColor.Keyword);
+				int leftStart = output.NextPosition;
+				output.Write("(", BoxedTextColor.Keyword);
+				output.Write($"{val:x4}", BoxedTextColor.Keyword);
+				int rightStart = output.NextPosition;
+				output.Write(")", BoxedTextColor.Keyword);
+				output.AddBracePair(new TextSpan(leftStart, 1), new TextSpan(rightStart, 1), CodeBracesRangeFlags.Parentheses);
 				output.Write(" ", BoxedTextColor.Text);
 			}
 

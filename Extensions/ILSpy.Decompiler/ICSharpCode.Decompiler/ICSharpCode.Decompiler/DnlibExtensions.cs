@@ -418,6 +418,15 @@ namespace ICSharpCode.Decompiler {
 				return methodSig.Params;
 		}
 
+		public static IList<TypeSig> GetParametersWithoutSentinel(this MethodBaseSig methodSig)
+		{
+			if (methodSig is null)
+				return new List<TypeSig>();
+			if (methodSig.ParamsAfterSentinel is not null)
+				return methodSig.Params.Concat(methodSig.ParamsAfterSentinel).ToList();
+			return methodSig.Params;
+		}
+
 		public static ITypeDefOrRef GetTypeDefOrRef(this TypeSig type)
 		{
 			type = type.RemovePinnedAndModifiers();
@@ -692,18 +701,6 @@ namespace ICSharpCode.Decompiler {
 					return section;
 			}
 			return null;
-		}
-
-		public static int IndexOf<T>(this IReadOnlyList<T> collection, T value) {
-			var comparer = EqualityComparer<T>.Default;
-			int index = 0;
-			foreach (var item in collection) {
-				if (comparer.Equals(item, value)) {
-					return index;
-				}
-				index++;
-			}
-			return -1;
 		}
 	}
 }

@@ -59,7 +59,14 @@ namespace ICSharpCode.Decompiler.Disassembler {
 
 			if (options.ShowTokenAndRvaComments) {
 				output.WriteLine(string.Format("// Header Size: {0} {1}", body.HeaderSize, body.HeaderSize == 1 ? "byte" : "bytes"), BoxedTextColor.Comment);
-				output.WriteLine(string.Format("// Code Size: {0} (0x{0:X}) {1}", codeSize, codeSize == 1 ? "byte" : "bytes"), BoxedTextColor.Comment);
+				output.Write(string.Format("// Code Size: {0} ", codeSize), BoxedTextColor.Comment);
+				int leftStart = output.NextPosition;
+				output.Write("(", BoxedTextColor.Comment);
+				output.Write(string.Format("0x{0:X}", codeSize), BoxedTextColor.Comment);
+				int rightStart = output.NextPosition;
+				output.Write(")", BoxedTextColor.Comment);
+				output.AddBracePair(new TextSpan(leftStart, 1), new TextSpan(rightStart, 1), CodeBracesRangeFlags.Parentheses);
+				output.WriteLine(string.Format(" {0}", codeSize == 1 ? "byte" : "bytes"), BoxedTextColor.Comment);
 				if (body.LocalVarSigTok != 0) {
 					output.Write("// LocalVarSig Token: ", BoxedTextColor.Comment);
 					output.Write(string.Format("0x{0:X8}", body.LocalVarSigTok), new TokenReference(method.Module, body.LocalVarSigTok), DecompilerReferenceFlags.None, BoxedTextColor.Comment);
@@ -71,7 +78,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			output.Write(" ", BoxedTextColor.Text);
 			output.WriteLine(numberFormatter.Format(body.MaxStack), BoxedTextColor.Number);
             if (method.DeclaringType.Module.EntryPoint == method)
-                output.WriteLine (".entrypoint", BoxedTextColor.ILDirective);
+                output.WriteLine(".entrypoint", BoxedTextColor.ILDirective);
 
 			if (body.HasVariables) {
 				output.Write(".locals", BoxedTextColor.ILDirective);
@@ -117,7 +124,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			if (detectControlStructure && body.Instructions.Count > 0) {
 				int index = 0;
 				HashSet<uint> branchTargets = GetBranchTargets(body.Instructions);
-				WriteStructureBody(body, new ILStructure(body), branchTargets, ref index, builder, instructionOperandConverter, body.GetCodeSize(), baseRva, baseOffs, byteReader, pdbAsyncInfo, method, sb);
+				WriteStructureBody(body, new ILStructure(body), branchTargets, ref index, builder, instructionOperandConverter, body.GetCodeSize(), baseRva, baseOffs, byteReader, pdbAsyncInfo, method);
 			}
 			else {
 				var instructions = body.Instructions;
@@ -159,16 +166,21 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			return branchTargets;
 		}
 
-		BracePairHelper WriteStructureHeader(ILStructure s, StringBuilder sb)
+		BracePairHelper WriteStructureHeader(ILStructure s, MethodDef methodDef)
 		{
 			BracePairHelper bh;
 			switch (s.Type) {
 				case ILStructureType.Loop:
 					output.Write("// loop start", BoxedTextColor.Comment);
 					if (s.LoopEntryPoint != null) {
-						output.Write(" (head: ", BoxedTextColor.Comment);
-						DisassemblerHelpers.WriteOffsetReference(output, s.LoopEntryPoint, null, BoxedTextColor.Comment);
+						output.Write(" ", BoxedTextColor.Comment);
+						int leftStart = output.NextPosition;
+						output.Write("(", BoxedTextColor.Comment);
+						output.Write("head: ", BoxedTextColor.Comment);
+						DisassemblerHelpers.WriteOffsetReference(output, s.LoopEntryPoint, methodDef, BoxedTextColor.Comment);
+						int rightStart = output.NextPosition;
 						output.Write(")", BoxedTextColor.Comment);
+						output.AddBracePair(new TextSpan(leftStart, 1), new TextSpan(rightStart, 1), CodeBracesRangeFlags.Parentheses);
 					}
 					output.WriteLine();
 					bh = default(BracePairHelper);
@@ -219,7 +231,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			return bh;
 		}
 
-		void WriteStructureBody(CilBody body, ILStructure s, HashSet<uint> branchTargets, ref int index, MethodDebugInfoBuilder builder, InstructionOperandConverter instructionOperandConverter, int codeSize, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, MethodDef method, StringBuilder sb)
+		void WriteStructureBody(CilBody body, ILStructure s, HashSet<uint> branchTargets, ref int index, MethodDebugInfoBuilder builder, InstructionOperandConverter instructionOperandConverter, int codeSize, uint baseRva, long baseOffs, IInstructionBytesReader byteReader, PdbAsyncMethodCustomDebugInfo pdbAsyncInfo, MethodDef method)
 		{
 			bool isFirstInstructionInStructure = true;
 			bool prevInstructionWasBranch = false;
@@ -232,19 +244,19 @@ namespace ICSharpCode.Decompiler.Disassembler {
 				uint offset = inst.Offset;
 				if (childIndex < s.Children.Count && s.Children[childIndex].StartOffset <= offset && offset < s.Children[childIndex].EndOffset) {
 					ILStructure child = s.Children[childIndex++];
-					var bh = WriteStructureHeader(child, sb);
-					WriteStructureBody(body, child, branchTargets, ref index, builder, instructionOperandConverter, codeSize, baseRva, baseOffs, byteReader, pdbAsyncInfo, method, sb);
+					var bh = WriteStructureHeader(child, method);
+					WriteStructureBody(body, child, branchTargets, ref index, builder, instructionOperandConverter, codeSize, baseRva, baseOffs, byteReader, pdbAsyncInfo, method);
 					WriteStructureFooter(child, bh);
 				} else {
 					if (!isFirstInstructionInStructure && (prevInstructionWasBranch || branchTargets.Contains(offset))) {
 						output.WriteLine(); // put an empty line after branches, and in front of branch targets
 					}
-					int startLocation;
-					inst.WriteTo(output, sb, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out startLocation);
+
+					inst.WriteTo(output, sb, options, baseRva, baseOffs, byteReader, method, instructionOperandConverter, pdbAsyncInfo, out int startLocation);
 
 					if (builder != null) {
 						var next = index + 1 < instructions.Count ? instructions[index + 1] : null;
-						builder.Add(new SourceStatement(ILSpan.FromBounds(inst.Offset, next == null ? (uint)codeSize : next.Offset), new TextSpan(startLocation, output.NextPosition - startLocation)));
+						builder.Add(new SourceStatement(ILSpan.FromBounds(inst.Offset, next?.Offset ?? (uint)codeSize), new TextSpan(startLocation, output.NextPosition - startLocation)));
 					}
 
 					output.WriteLine();
