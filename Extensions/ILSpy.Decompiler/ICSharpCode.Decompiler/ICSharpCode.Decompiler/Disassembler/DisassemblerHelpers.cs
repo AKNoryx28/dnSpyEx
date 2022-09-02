@@ -20,7 +20,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using dnlib.DotNet.Pdb;
@@ -609,7 +608,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					if (MustEscape(typeFullName))
 						writer.Write(Escape(typeFullName), type, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(type));
 					else {
-						WriteNamespace(writer, type.Namespace, type.DefinitionAssembly);
+						WriteNamespace(writer, type.Namespace, type.DefinitionAssembly, sb);
 						if (!string.IsNullOrEmpty(type.Namespace))
 							writer.Write(".", BoxedTextColor.Operator);
 						writer.Write(IdentifierEscaper.Escape(type.Name), type, DecompilerReferenceFlags.None, CSharpMetadataTextColorProvider.Instance.GetColor(type));
@@ -618,9 +617,8 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 		}
 
-		internal static void WriteNamespace(IDecompilerOutput writer, string ns, IAssembly nsAsm)
+		internal static void WriteNamespace(IDecompilerOutput writer, string ns, IAssembly nsAsm, StringBuilder sb)
 		{
-			var sb = Interlocked.CompareExchange(ref cachedStringBuilder, null, cachedStringBuilder) ?? new StringBuilder();
 			sb.Clear();
 			var parts = ns.Split('.');
 			for (int i = 0; i < parts.Length; i++) {
@@ -635,10 +633,7 @@ namespace ICSharpCode.Decompiler.Disassembler {
 					writer.Write(IdentifierEscaper.Escape(nsPart), nsRef, DecompilerReferenceFlags.None, BoxedTextColor.Namespace);
 				}
 			}
-			if (sb.Capacity <= 1000)
-				cachedStringBuilder = sb;
 		}
-		static StringBuilder cachedStringBuilder = new StringBuilder();
 
 		internal static void WriteKeyword(IDecompilerOutput writer, string name, ITypeDefOrRef tdr)
 		{

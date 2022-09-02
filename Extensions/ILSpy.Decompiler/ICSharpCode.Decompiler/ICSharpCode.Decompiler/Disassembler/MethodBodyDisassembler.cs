@@ -76,8 +76,9 @@ namespace ICSharpCode.Decompiler.Disassembler {
 			}
 			output.Write(".maxstack", BoxedTextColor.ILDirective);
 			output.Write(" ", BoxedTextColor.Text);
-			output.WriteLine(numberFormatter.Format(body.MaxStack), BoxedTextColor.Number);
-            if (method.DeclaringType.Module.EntryPoint == method)
+			output.Write(numberFormatter.Format(body.MaxStack), body.MaxStack, DecompilerReferenceFlags.Local | DecompilerReferenceFlags.Hidden | DecompilerReferenceFlags.NoFollow, BoxedTextColor.Number);
+			output.WriteLine();
+			if (method.DeclaringType.Module.EntryPoint == method)
                 output.WriteLine(".entrypoint", BoxedTextColor.ILDirective);
 
 			if (body.HasVariables) {
