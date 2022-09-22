@@ -1,14 +1,14 @@
 ﻿// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this
 // software and associated documentation files (the "Software"), to deal in the Software
 // without restriction, including without limitation the rights to use, copy, modify, merge,
 // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
 // to whom the Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 // INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
 // PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
@@ -69,7 +69,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				foreach (var nsRef in importedNamespaces)
 					context.UsingNamespaces.Add(nsRef.Namespace);
 			}
-			
+
 			if (context.Settings.UsingDeclarations) {
 				// Now add using declarations for those namespaces:
 				foreach (var ns in GetNamespacesInReverseOrder()) {
@@ -91,16 +91,16 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					compilationUnit.InsertChildAfter(null, new UsingDeclaration { Import = nsType }, SyntaxTree.MemberRole);
 				}
 			}
-			
+
 			if (!context.Settings.FullyQualifyAmbiguousTypeNames && !context.Settings.FullyQualifyAllTypes)
 				return;
 
 			if (context.CurrentModule != null) {
 				if (lastCheckedModule != context.CurrentModule) {
 					typesWithNamespace_currentModule.Clear();
-					BuildAmbiguousTypeNamesTable(typesWithNamespace_currentModule, context.CurrentModule.Types, true);
+					BuildAmbiguousTypeNamesTable(typesWithNamespace_currentModule, context.CurrentModule.Types, _ => true);
 				}
-				FindAmbiguousTypeNames(typesWithNamespace_currentModule, true);
+				FindAmbiguousTypeNames(typesWithNamespace_currentModule, _ => true);
 				if (lastCheckedModule != context.CurrentModule) {
 					var asmDict = new Dictionary<AssemblyDef, List<AssemblyDef>>(AssemblyEqualityComparer.Instance);
 					lastCheckedModule = context.CurrentModule;
@@ -108,29 +108,28 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 						AssemblyDef d = context.CurrentModule.Context.AssemblyResolver.Resolve(r, context.CurrentModule);
 						if (d == null)
 							continue;
-						List<AssemblyDef> list;
-						if (!asmDict.TryGetValue(d, out list))
+						if (!asmDict.TryGetValue(d, out var list))
 							asmDict.Add(d, list = new List<AssemblyDef>());
 						list.Add(d);
 					}
 					typesWithNamespace_allAsms_list.Clear();
 					foreach (var list in asmDict.Values) {
 						var dict = new Dictionary<string, List<TypeDef>>(StringComparer.Ordinal);
-						BuildAmbiguousTypeNamesTable(dict, GetTypes(list), false);
+						BuildAmbiguousTypeNamesTable(dict, GetTypes(list), def => context.CurrentModule.Assembly?.IsFriendAssemblyOf(def) ?? false);
 						typesWithNamespace_allAsms_list.Add(dict);
 					}
 				}
 				foreach (var dict in typesWithNamespace_allAsms_list) {
-					FindAmbiguousTypeNames(dict, false);
+					FindAmbiguousTypeNames(dict, def => context.CurrentModule.Assembly?.IsFriendAssemblyOf(def) ?? false);
 				}
 			}
-			
+
 			// verify that the SimpleTypes refer to the correct type (no ambiguities)
 			compilationUnit.AcceptVisitor(new FullyQualifyAmbiguousTypeNamesVisitor(this), null);
 		}
 		static readonly char[] namespaceSep = new char[] { '.' };
 
-		struct NamespaceRef : IEquatable<NamespaceRef> {
+		readonly struct NamespaceRef : IEquatable<NamespaceRef> {
 			public IAssembly Assembly { get; }
 			public string Namespace { get; }
 			public NamespaceRef(IAssembly asm, string ns) {
@@ -138,7 +137,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				Namespace = ns;
 			}
 			public bool Equals(NamespaceRef other) => StringComparer.Ordinal.Equals(other.Namespace, Namespace);
-			public override bool Equals(object obj) => obj is NamespaceRef && Equals((NamespaceRef)obj);
+			public override bool Equals(object obj) => obj is NamespaceRef namespaceRef && Equals(namespaceRef);
 			public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Namespace);
 		}
 
@@ -159,13 +158,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 		sealed class ReverseSortSystemUsingStatementsFirstComparer : IComparer<NamespaceRef> {
 			public static readonly ReverseSortSystemUsingStatementsFirstComparer Instance = new ReverseSortSystemUsingStatementsFirstComparer();
 			public int Compare(NamespaceRef x, NamespaceRef y) {
-				bool sx = x.Namespace == "System" || x.Namespace.StartsWith("System.");
-				bool sy = y.Namespace == "System" || y.Namespace.StartsWith("System.");
+				bool sx = x.Namespace == "System" || x.Namespace.StartsWith("System.", StringComparison.Ordinal);
+				bool sy = y.Namespace == "System" || y.Namespace.StartsWith("System.", StringComparison.Ordinal);
 				if (sx && sy)
 					return StringComparer.OrdinalIgnoreCase.Compare(y.Namespace, x.Namespace);
-				if (sx && !sy)
+				if (sx)
 					return 1;
-				if (!sx && sy)
+				if (sy)
 					return -1;
 				return StringComparer.OrdinalIgnoreCase.Compare(y.Namespace, x.Namespace);
 			}
@@ -228,25 +227,25 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					obj.PublicKey.GetHashCode());
 			}
 		}
-		
+
 		readonly HashSet<string> importedOrDeclaredNamespaces = new HashSet<string>(StringComparer.Ordinal);
 		readonly HashSet<NamespaceRef> importedNamespaces = new HashSet<NamespaceRef>();
-		
+
 		// Note that we store type names with `n suffix, so we automatically disambiguate based on number of type parameters.
 		readonly HashSet<string> availableTypeNames = new HashSet<string>(StringComparer.Ordinal);
 		readonly HashSet<string> ambiguousTypeNames = new HashSet<string>(StringComparer.Ordinal);
-		
+
 		sealed class FindRequiredImports : DepthFirstAstVisitor<object, object>
 		{
 			readonly IntroduceUsingDeclarations transform;
 			string currentNamespace;
-			
+
 			public FindRequiredImports(IntroduceUsingDeclarations transform)
 			{
 				this.transform = transform;
 				this.currentNamespace = transform.context.CurrentType != null ? transform.context.CurrentType.Namespace.String : string.Empty;
 			}
-			
+
 			bool IsParentOfCurrentNamespace(StringBuilder sb)
 			{
 				if (sb.Length == 0)
@@ -259,7 +258,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				}
 				return false;
 			}
-			
+
 			public override object VisitSimpleType(SimpleType simpleType, object data)
 			{
 				ITypeDefOrRef tr = simpleType.Annotation<ITypeDefOrRef>();
@@ -281,7 +280,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					return this.transform.stringBuilder;
 				return FullNameFactory.NamespaceSB(type, false, this.transform.stringBuilder);
 			}
-			
+
 			public override object VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration, object data)
 			{
 				string oldNamespace = currentNamespace;
@@ -295,27 +294,25 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 			}
 		}
 
-		void BuildAmbiguousTypeNamesTable(Dictionary<string, List<TypeDef>> dict, IEnumerable<TypeDef> types, bool internalsVisible)
+		void BuildAmbiguousTypeNamesTable(Dictionary<string, List<TypeDef>> dict, IEnumerable<TypeDef> types, Func<AssemblyDef, bool> internalsVisible)
 		{
 			foreach (TypeDef type in types) {
-				if (!internalsVisible && !type.IsPublic)
+				if (!type.IsPublic && !internalsVisible(type.Module.Assembly))
 					continue;
-				List<TypeDef> list;
 				string ns = type.Namespace;
-				if (!dict.TryGetValue(ns, out list))
+				if (!dict.TryGetValue(ns, out var list))
 					dict.Add(ns, list = new List<TypeDef>());
 				list.Add(type);
 			}
 		}
-		
-		void FindAmbiguousTypeNames(Dictionary<string, List<TypeDef>> dict, bool internalsVisible)
+
+		void FindAmbiguousTypeNames(Dictionary<string, List<TypeDef>> dict, Func<AssemblyDef, bool> internalsVisible)
 		{
 			foreach (var ns in importedOrDeclaredNamespaces) {
-				List<TypeDef> list;
-				if (!dict.TryGetValue(ns, out list))
+				if (!dict.TryGetValue(ns, out var list))
 					continue;
 				foreach (var type in list) {
-					if (!internalsVisible && !type.IsPublic)
+					if (!type.IsPublic && !internalsVisible(type.Module.Assembly))
 						continue;
 					string name = type.Name;
 					if (!availableTypeNames.Add(name))
@@ -323,7 +320,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				}
 			}
 		}
-		
+
 		sealed class FullyQualifyAmbiguousTypeNamesVisitor : DepthFirstAstVisitor<object, object>
 		{
 			readonly IntroduceUsingDeclarations transform;
@@ -331,13 +328,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 			HashSet<string> currentMemberTypes;
 			Dictionary<string, IMemberRef> currentMembers;
 			bool isWithinTypeReferenceExpression;
-			
+
 			public FullyQualifyAmbiguousTypeNamesVisitor(IntroduceUsingDeclarations transform)
 			{
 				this.transform = transform;
 				this.currentNamespace = transform.context.CurrentType != null ? transform.context.CurrentType.Namespace.String : string.Empty;
 			}
-			
+
 			public override object VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration, object data)
 			{
 				string oldNamespace = currentNamespace;
@@ -348,18 +345,17 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				currentNamespace = oldNamespace;
 				return null;
 			}
-			
+
 			public override object VisitTypeDeclaration(TypeDeclaration typeDeclaration, object data)
 			{
-				HashSet<string> oldMemberTypes = currentMemberTypes;
 				currentMemberTypes = currentMemberTypes != null ? new HashSet<string>(currentMemberTypes) : new HashSet<string>();
-				
+
 				Dictionary<string, IMemberRef> oldMembers = currentMembers;
 				currentMembers = new Dictionary<string, IMemberRef>();
-				
+
 				TypeDef typeDef = typeDeclaration.Annotation<TypeDef>();
 				bool privateMembersVisible = true;
-				ModuleDef internalMembersVisibleInModule = typeDef == null ? null : typeDef.Module;
+				ModuleDef internalMembersVisibleInModule = typeDef?.Module;
 				while (typeDef != null) {
 					foreach (GenericParam gp in typeDef.GenericParameters) {
 						currentMemberTypes.Add(gp.Name);
@@ -368,7 +364,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 						if (privateMembersVisible || IsVisible(t, internalMembersVisibleInModule))
 							currentMemberTypes.Add(t.Name.Substring(t.Name.LastIndexOf('+') + 1));
 					}
-					
+
 					foreach (MethodDef method in typeDef.Methods) {
 						if (privateMembersVisible || IsVisible(method, internalMembersVisibleInModule))
 							AddCurrentMember(method);
@@ -386,13 +382,10 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 							AddCurrentMember(f);
 					}
 					// repeat with base class:
-					if (typeDef.BaseType != null)
-						typeDef = typeDef.BaseType.ResolveTypeDef();
-					else
-						typeDef = null;
+					typeDef = typeDef.BaseType?.ResolveTypeDef();
 					privateMembersVisible = false;
 				}
-				
+
 				// Now add current members from outer classes:
 				if (oldMembers != null) {
 					foreach (var pair in oldMembers) {
@@ -401,16 +394,15 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 							currentMembers.Add(pair.Key, pair.Value);
 					}
 				}
-				
+
 				base.VisitTypeDeclaration(typeDeclaration, data);
 				currentMembers = oldMembers;
 				return null;
 			}
-			
+
 			void AddCurrentMember(IMemberRef m)
 			{
-				IMemberRef existingMember;
-				if (currentMembers.TryGetValue(m.Name, out existingMember)) {
+				if (currentMembers.TryGetValue(m.Name, out var existingMember)) {
 					// We keep the existing member assignment if it was from another class (=from a derived class),
 					// because members in derived classes have precedence over members in base classes.
 					if (existingMember != null && existingMember.DeclaringType == m.DeclaringType) {
@@ -421,7 +413,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					currentMembers.Add(m.Name, m);
 				}
 			}
-			
+
 			bool IsVisible(MethodDef m, ModuleDef internalMembersVisibleInModule)
 			{
 				if (m == null)
@@ -429,7 +421,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				switch (m.Attributes & MethodAttributes.MemberAccessMask) {
 					case MethodAttributes.FamANDAssem:
 					case MethodAttributes.Assembly:
-						return m.Module == internalMembersVisibleInModule;
+						if (m.Module is null)
+							return false;
+						if (m.Module == internalMembersVisibleInModule)
+							return true;
+						var methodAsm = m.Module.Assembly;
+						var currentAsm = internalMembersVisibleInModule.Assembly;
+						return methodAsm is not null && currentAsm is not null && currentAsm.IsFriendAssemblyOf(methodAsm);
 					case MethodAttributes.Family:
 					case MethodAttributes.FamORAssem:
 					case MethodAttributes.Public:
@@ -438,7 +436,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 						return false;
 				}
 			}
-			
+
 			bool IsVisible(FieldDef f, ModuleDef internalMembersVisibleInModule)
 			{
 				if (f == null)
@@ -446,7 +444,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				switch (f.Attributes & FieldAttributes.FieldAccessMask) {
 					case FieldAttributes.FamANDAssem:
 					case FieldAttributes.Assembly:
-						return f.Module == internalMembersVisibleInModule;
+						if (f.Module is null)
+							return false;
+						if (f.Module == internalMembersVisibleInModule)
+							return true;
+						var fieldAsm = f.Module.Assembly;
+						var currentAsm = internalMembersVisibleInModule.Assembly;
+						return fieldAsm is not null && currentAsm is not null && currentAsm.IsFriendAssemblyOf(fieldAsm);
 					case FieldAttributes.Family:
 					case FieldAttributes.FamORAssem:
 					case FieldAttributes.Public:
@@ -455,7 +459,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 						return false;
 				}
 			}
-			
+
 			bool IsVisible(TypeDef t, ModuleDef internalMembersVisibleInModule)
 			{
 				if (t == null)
@@ -464,7 +468,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 					case TypeAttributes.NotPublic:
 					case TypeAttributes.NestedAssembly:
 					case TypeAttributes.NestedFamANDAssem:
-						return t.Module == internalMembersVisibleInModule;
+						if (t.Module is null)
+							return false;
+						if (t.Module == internalMembersVisibleInModule)
+							return true;
+						var typeAsm = t.Module.Assembly;
+						var currentAsm = internalMembersVisibleInModule.Assembly;
+						return typeAsm is not null && currentAsm is not null && currentAsm.IsFriendAssemblyOf(typeAsm);
 					case TypeAttributes.NestedFamily:
 					case TypeAttributes.NestedFamORAssem:
 					case TypeAttributes.NestedPublic:
@@ -474,7 +484,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 						return false;
 				}
 			}
-			
+
 			public override object VisitSimpleType(SimpleType simpleType, object data)
 			{
 				// Handle type arguments first, so that the fixed-up type arguments get moved over to the MemberType,
@@ -512,17 +522,18 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 							ns = new MemberType { Target = ns, MemberNameToken = Identifier.Create(parts[i]).WithAnnotation(BoxedTextColor.Namespace).WithAnnotation(new NamespaceReference(nsAsm, nsPart)) }.WithAnnotation(BoxedTextColor.Namespace);
 						}
 					}
-					MemberType mt = new MemberType();
-					mt.Target = ns;
-					mt.IsDoubleColon = string.IsNullOrEmpty(nss);
-					mt.MemberNameToken = (Identifier)simpleType.IdentifierToken.Clone();
+					MemberType mt = new MemberType {
+						Target = ns,
+						IsDoubleColon = string.IsNullOrEmpty(nss),
+						MemberNameToken = (Identifier)simpleType.IdentifierToken.Clone()
+					};
 					mt.CopyAnnotationsFrom(simpleType);
 					simpleType.TypeArguments.MoveTo(mt.TypeArguments);
 					simpleType.ReplaceWith(mt);
 				}
 				return null;
 			}
-			
+
 			public override object VisitTypeReferenceExpression(TypeReferenceExpression typeReferenceExpression, object data)
 			{
 				isWithinTypeReferenceExpression = true;
@@ -536,15 +547,13 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				if (transform.context.Settings.FullyQualifyAllTypes)
 					return true;
 				// If the type name conflicts with an inner class/type parameter, we need to fully-qualify it:
-				if (currentMemberTypes != null && currentMemberTypes.Contains(name ?? (name = sbName.ToString())))
+				if (currentMemberTypes != null && currentMemberTypes.Contains(name ??= sbName.ToString()))
 					return true;
 				// If the type name conflicts with a field/property etc. on the current class, we need to fully-qualify it,
 				// if we're inside an expression.
 				if (isWithinTypeReferenceExpression && currentMembers != null) {
-					IMemberRef mr;
-					if (name == null)
-						name = sbName.ToString();
-					if (currentMembers.TryGetValue(name, out mr)) {
+					name ??= sbName.ToString();
+					if (currentMembers.TryGetValue(name, out var mr)) {
 						// However, in the special case where the member is a field or property with the same type
 						// as is requested, then we can use the short name (if it's not otherwise ambiguous)
 						PropertyDef prop = mr as PropertyDef;
@@ -558,7 +567,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms {
 				// then we can use the short name even if we imported type with same name from another namespace.
 				if (ns == currentNamespace && !string.IsNullOrEmpty(ns))
 					return false;
-				return transform.ambiguousTypeNames.Contains(name ?? (name = sbName.ToString()));
+				return transform.ambiguousTypeNames.Contains(name ?? sbName.ToString());
 			}
 
 			StringBuilder GetNamespace(IType type)
