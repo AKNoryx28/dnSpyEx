@@ -36,6 +36,37 @@ function Build-NetFramework {
 	}
 }
 
+function Build-Net-Linux {
+	param([string]$arch)
+
+	Write-Host "Building .NET $arch binaries"
+
+	$rid = "linux-$arch"
+	$outdir = "$net_baseoutput\$net_tfm\$rid"
+	$publishDir = "$outdir\publish"
+
+	if ($NoMsbuild) {
+		dotnet publish -v:m -c $configuration -f $net_tfm -r $rid --self-contained
+		if ($LASTEXITCODE) { exit $LASTEXITCODE }
+	}
+	else {
+		msbuild -v:m -m -restore -t:Publish -p:Configuration=$configuration -p:TargetFramework=$net_tfm -p:RuntimeIdentifier=$rid -p:SelfContained=True
+		if ($LASTEXITCODE) { exit $LASTEXITCODE }
+	}
+
+	# move all files to a bin sub dir but keep the exe apphosts
+	$tmpbin = 'tmpbin'
+	Rename-Item $publishDir $tmpbin
+	New-Item -ItemType Directory $publishDir > $null
+	Move-Item $outdir\$tmpbin $publishDir
+	Rename-Item $publishDir\$tmpbin bin
+	foreach ($exe in 'dnSpy', 'dnSpy.Console') {
+		Move-Item $publishDir\bin\$exe $publishDir
+		& $apphostpatcher_dir\bin\$configuration\$netframework_tfm\AppHostPatcher $publishDir\$exe -d bin
+		if ($LASTEXITCODE) { exit $LASTEXITCODE }
+	}
+}
+
 function Build-Net {
 	param([string]$arch)
 
@@ -70,8 +101,9 @@ function Build-Net {
 $buildNet	 = $buildtfm -eq 'all' -or $buildtfm -eq 'netframework'
 $buildNetX86 = $buildtfm -eq 'all' -or $buildtfm -eq 'net-x86'
 $buildNetX64 = $buildtfm -eq 'all' -or $buildtfm -eq 'net-x64'
+$buildNetLinuxX64 = $buildtfm -eq 'all' -or $buildtfm -eq 'net-linux-x64'
 
-if ($buildNetX86 -or $buildNetX64) {
+if ($buildNetX86 -or $buildNetX64 -or $buildNetLinuxX64) {
 	if ($NoMsbuild) {
 		dotnet build -v:m -c $configuration -f $netframework_tfm $apphostpatcher_dir\AppHostPatcher.csproj
 		if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -92,4 +124,8 @@ if ($buildNetX86) {
 
 if ($buildNetX64) {
 	Build-Net x64
+}
+
+if ($buildNetLinuxX64) {
+	Build-Net-Linux x64
 }
