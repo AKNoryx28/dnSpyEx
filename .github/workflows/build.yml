@@ -24,7 +24,7 @@ jobs:
           shell: pwsh
     strategy:
       matrix:
-        platform: [netframework, net-x86, net-x64, net-linux-x64]
+        platform: [netframework, net-x86, net-x64]
         include:
           - platform: netframework
             package-name: netframework
@@ -35,9 +35,6 @@ jobs:
           - platform: net-x64
             package-name: net-win64
             build-dir: net6.0-windows\win-x64\publish
-          - platform: net-linux-x64
-            package-name: net-linux64
-            build-dir: net6.0-windows\linux-x64\publish
 
     steps:
       - uses: actions/checkout@v3
